@@ -16,115 +16,83 @@
  */
 package org.apache.jackrabbit.oak.segment.azure;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.nio.file.Paths;
-import java.util.Date;
-import java.util.EnumSet;
-import java.util.concurrent.TimeUnit;
-
-import com.microsoft.azure.storage.OperationContext;
-import com.microsoft.azure.storage.RequestCompletedEvent;
-import com.microsoft.azure.storage.StorageEvent;
-import com.microsoft.azure.storage.StorageException;
-import com.microsoft.azure.storage.blob.BlobListingDetails;
-import com.microsoft.azure.storage.blob.CloudAppendBlob;
-import com.microsoft.azure.storage.blob.CloudBlobDirectory;
-import com.microsoft.azure.storage.blob.CloudBlockBlob;
-import com.microsoft.azure.storage.blob.ListBlobItem;
-import org.apache.jackrabbit.oak.segment.azure.util.AzureRequestOptions;
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.models.BlobItem;
+import com.azure.storage.blob.models.ListBlobsOptions;
+import com.azure.storage.blob.specialized.BlobLeaseClient;
+import com.azure.storage.blob.specialized.BlobLeaseClientBuilder;
+import com.azure.storage.blob.specialized.BlockBlobClient;
 import org.apache.jackrabbit.oak.segment.remote.WriteAccessController;
 import org.apache.jackrabbit.oak.segment.spi.monitor.FileStoreMonitor;
 import org.apache.jackrabbit.oak.segment.spi.monitor.IOMonitor;
 import org.apache.jackrabbit.oak.segment.spi.monitor.RemoteStoreMonitor;
-import org.apache.jackrabbit.oak.segment.spi.persistence.GCJournalFile;
-import org.apache.jackrabbit.oak.segment.spi.persistence.JournalFile;
-import org.apache.jackrabbit.oak.segment.spi.persistence.ManifestFile;
-import org.apache.jackrabbit.oak.segment.spi.persistence.RepositoryLock;
-import org.apache.jackrabbit.oak.segment.spi.persistence.SegmentArchiveManager;
-import org.apache.jackrabbit.oak.segment.spi.persistence.SegmentNodeStorePersistence;
+import org.apache.jackrabbit.oak.segment.spi.persistence.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
 
 public class AzurePersistence implements SegmentNodeStorePersistence {
     private static final Logger log = LoggerFactory.getLogger(AzurePersistence.class);
 
-    protected final CloudBlobDirectory segmentstoreDirectory;
+    protected final BlobContainerClient blobContainerClient;
+
+    protected final String rootPrefix;
 
     protected WriteAccessController writeAccessController = new WriteAccessController();
 
-    public AzurePersistence(CloudBlobDirectory segmentStoreDirectory) {
-        this.segmentstoreDirectory = segmentStoreDirectory;
+    public AzurePersistence(BlobContainerClient blobContainerClient, String rootPrefix) {
+        this.blobContainerClient = blobContainerClient;
+        this.rootPrefix = rootPrefix;
 
-        AzureRequestOptions.applyDefaultRequestOptions(segmentStoreDirectory.getServiceClient().getDefaultRequestOptions());
+        //TODO ierandra: check how to fix this
+        //AzureRequestOptions.applyDefaultRequestOptions(blobContainerClient.getServiceClient().getDefaultRequestOptions());
     }
 
     @Override
     public SegmentArchiveManager createArchiveManager(boolean mmap, boolean offHeapAccess, IOMonitor ioMonitor, FileStoreMonitor fileStoreMonitor, RemoteStoreMonitor remoteStoreMonitor) {
         attachRemoteStoreMonitor(remoteStoreMonitor);
-        return new AzureArchiveManager(segmentstoreDirectory, ioMonitor, fileStoreMonitor, writeAccessController);
+        return new AzureArchiveManager(blobContainerClient, rootPrefix, ioMonitor, fileStoreMonitor, writeAccessController);
     }
 
     @Override
     public boolean segmentFilesExist() {
-        try {
-            for (ListBlobItem i : segmentstoreDirectory.listBlobs(null, false, EnumSet.noneOf(BlobListingDetails.class), null, null)) {
-                if (i instanceof CloudBlobDirectory) {
-                    CloudBlobDirectory dir = (CloudBlobDirectory) i;
-                    String name = Paths.get(dir.getPrefix()).getFileName().toString();
-                    if (name.endsWith(".tar")) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        } catch (StorageException | URISyntaxException e) {
-            log.error("Can't check if the segment archives exists", e);
-            return false;
-        }
+        ListBlobsOptions listOptions = new ListBlobsOptions();
+        listOptions.setPrefix(rootPrefix + "/");
+        return blobContainerClient.listBlobs(listOptions, null).stream()
+                .filter(BlobItem::isPrefix)
+                .anyMatch(blobItem -> blobItem.getName().endsWith(".tar") || blobItem.getName().endsWith(".tar/"));
     }
 
     @Override
     public JournalFile getJournalFile() {
-        return new AzureJournalFile(segmentstoreDirectory, "journal.log", writeAccessController);
+        return new AzureJournalFile(blobContainerClient, rootPrefix + "/journal.log", writeAccessController);
     }
 
     @Override
     public GCJournalFile getGCJournalFile() throws IOException {
-        return new AzureGCJournalFile(getAppendBlob("gc.log"));
+        return new AzureGCJournalFile(blobContainerClient.getBlobClient(rootPrefix + "/gc.log").getAppendBlobClient());
     }
 
     @Override
     public ManifestFile getManifestFile() throws IOException {
-        return new AzureManifestFile(getBlockBlob("manifest"));
+        return new AzureManifestFile(blobContainerClient.getBlobClient(rootPrefix + "/manifest").getBlockBlobClient());
     }
 
     @Override
     public RepositoryLock lockRepository() throws IOException {
-        return new AzureRepositoryLock(getBlockBlob("repo.lock"), () -> {
+        BlockBlobClient blockBlobClient = blobContainerClient.getBlobClient(rootPrefix + "repo.lock").getBlockBlobClient();
+        BlobLeaseClient leaseClient = new BlobLeaseClientBuilder().blobClient(blockBlobClient).buildClient();
+
+        return new AzureRepositoryLock(blockBlobClient, leaseClient, () -> {
             log.warn("Lost connection to the Azure. The client will be closed.");
             // TODO close the connection
         }, writeAccessController).lock();
     }
 
-    private CloudBlockBlob getBlockBlob(String path) throws IOException {
-        try {
-            return segmentstoreDirectory.getBlockBlobReference(path);
-        } catch (URISyntaxException | StorageException e) {
-            throw new IOException(e);
-        }
-    }
-
-    private CloudAppendBlob getAppendBlob(String path) throws IOException {
-        try {
-            return segmentstoreDirectory.getAppendBlobReference(path);
-        } catch (URISyntaxException | StorageException e) {
-            throw new IOException(e);
-        }
-    }
-
     private static void attachRemoteStoreMonitor(RemoteStoreMonitor remoteStoreMonitor) {
-        OperationContext.getGlobalRequestCompletedEventHandler().addListener(new StorageEvent<RequestCompletedEvent>() {
+        //TODO ierandra: check how to fix this
+       /* OperationContext.getGlobalRequestCompletedEventHandler().addListener(new StorageEvent<RequestCompletedEvent>() {
 
             @Override
             public void eventOccurred(RequestCompletedEvent e) {
@@ -145,12 +113,9 @@ public class AzurePersistence implements SegmentNodeStorePersistence {
                 }
             }
 
-        });
+        });*/
     }
 
-    public CloudBlobDirectory getSegmentstoreDirectory() {
-        return segmentstoreDirectory;
-    }
 
     public void setWriteAccessController(WriteAccessController writeAccessController) {
         this.writeAccessController = writeAccessController;

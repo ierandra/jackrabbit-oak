@@ -33,7 +33,7 @@ import org.apache.jackrabbit.oak.plugins.blob.datastore.DataStoreBlobStore;
 import org.apache.jackrabbit.oak.plugins.blob.datastore.OakFileDataStore;
 import org.apache.jackrabbit.oak.segment.SegmentNodeStore;
 import org.apache.jackrabbit.oak.segment.SegmentNodeStoreBuilders;
-import org.apache.jackrabbit.oak.segment.azure.AzurePersistence;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
 import org.apache.jackrabbit.oak.segment.file.FileStore;
 import org.apache.jackrabbit.oak.segment.file.FileStoreBuilder;
 import org.apache.jackrabbit.oak.segment.file.InvalidFileStoreVersionException;
@@ -44,7 +44,6 @@ import org.apache.jackrabbit.oak.spi.commit.CommitInfo;
 import org.apache.jackrabbit.oak.spi.commit.EmptyHook;
 import org.apache.jackrabbit.oak.spi.state.NodeBuilder;
 import org.apache.jackrabbit.oak.spi.state.NodeStore;
-import org.jetbrains.annotations.Nullable;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -78,7 +77,7 @@ public class SplitPersistenceBlobTest {
     @Before
     public void setup() throws IOException, InvalidFileStoreVersionException, CommitFailedException, URISyntaxException, InvalidKeyException, StorageException {
         SegmentNodeStorePersistence sharedPersistence =
-            new AzurePersistence(azurite.getContainer("oak-test").getDirectoryReference("oak"));
+            new AzurePersistenceV8(azurite.getContainer("oak-test").getDirectoryReference("oak"));
         File dataStoreDir = new File(folder.getRoot(), "blobstore");
         BlobStore blobStore = newBlobStore(dataStoreDir);
 

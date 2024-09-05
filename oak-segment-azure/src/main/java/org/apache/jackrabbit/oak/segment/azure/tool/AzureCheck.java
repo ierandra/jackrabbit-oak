@@ -16,6 +16,7 @@
  */
 package org.apache.jackrabbit.oak.segment.azure.tool;
 
+import com.azure.storage.blob.BlobContainerClient;
 import com.google.common.io.Files;
 import com.microsoft.azure.storage.blob.CloudBlobDirectory;
 import org.apache.jackrabbit.oak.segment.azure.AzurePersistence;
@@ -84,7 +85,7 @@ public class AzureCheck {
 
         private Integer persistentCacheSizeGb;
 
-        private CloudBlobDirectory cloudBlobDirectory;
+        private BlobContainerClient blobContainerClient;
 
         private Builder() {
             // Prevent external instantiation.
@@ -277,12 +278,12 @@ public class AzureCheck {
 
         /**
          * The Azure blob directory to connect to.
-         * @param cloudBlobDirectory
+         * @param blobContainerClient
          *          the Azure blob directory.
          * @return this builder
          */
-        public Builder withCloudBlobDirectory(CloudBlobDirectory cloudBlobDirectory) {
-            this.cloudBlobDirectory = requireNonNull(cloudBlobDirectory);
+        public Builder withCloudBlobDirectory(BlobContainerClient blobContainerClient) {
+            this.blobContainerClient = requireNonNull(blobContainerClient);
             return this;
         }
 
@@ -292,7 +293,7 @@ public class AzureCheck {
          * @return an instance of {@link Runnable}.
          */
         public AzureCheck build() {
-            if (cloudBlobDirectory == null) {
+            if (blobContainerClient == null) {
                 requireNonNull(path);
             }
             return new AzureCheck(this);
@@ -347,7 +348,7 @@ public class AzureCheck {
 
     private final Integer persistentCacheSizeGb;
 
-    private final CloudBlobDirectory cloudBlobDirectory;
+    private final BlobContainerClient blobContainerClient;
     private final AzureStorageCredentialManager azureStorageCredentialManager;
 
     private AzureCheck(Builder builder) {
@@ -366,7 +367,7 @@ public class AzureCheck {
         this.failFast = builder.failFast;
         this.persistentCachePath = builder.persistentCachePath;
         this.persistentCacheSizeGb = builder.persistentCacheSizeGb;
-        this.cloudBlobDirectory = builder.cloudBlobDirectory;
+        this.blobContainerClient = builder.blobContainerClient;
         this.azureStorageCredentialManager = new AzureStorageCredentialManager();
     }
 
@@ -378,8 +379,8 @@ public class AzureCheck {
         StatisticsIOMonitor ioMonitor = new StatisticsIOMonitor();
         SegmentNodeStorePersistence persistence;
 
-        if (cloudBlobDirectory != null) {
-            persistence = new AzurePersistence(cloudBlobDirectory);
+        if (blobContainerClient != null) {
+            persistence = new AzurePersistence(blobContainerClient, path);
         } else {
             persistence = ToolUtils.newSegmentNodeStorePersistence(ToolUtils.SegmentStoreType.AZURE, path, azureStorageCredentialManager);
         }
@@ -427,8 +428,6 @@ public class AzureCheck {
         } catch (Exception e) {
             e.printStackTrace(err);
             return 1;
-        } finally {
-            azureStorageCredentialManager.close();
         }
     }
 

@@ -364,8 +364,6 @@ public class SegmentCopy {
                         destination);
                 e.printStackTrace(errWriter);
                 return 1;
-            } finally {
-                azureStorageCredentialManager.close();
             }
         } else {
             try {
@@ -395,8 +393,6 @@ public class SegmentCopy {
                         destination);
                 e.printStackTrace(errWriter);
                 return 1;
-            } finally {
-                azureStorageCredentialManager.close();
             }
 
         }

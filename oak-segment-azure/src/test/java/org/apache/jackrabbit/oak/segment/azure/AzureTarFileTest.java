@@ -20,6 +20,7 @@ import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 
 import org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzuriteDockerRule;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
 import org.apache.jackrabbit.oak.segment.remote.WriteAccessController;
 import org.apache.jackrabbit.oak.segment.spi.monitor.FileStoreMonitorAdapter;
 import org.apache.jackrabbit.oak.segment.spi.monitor.IOMonitorAdapter;
@@ -46,11 +47,11 @@ public class AzureTarFileTest extends TarFileTest {
     public void setUp() throws IOException {
         try {
             container = azurite.getContainer("oak-test");
-            AzurePersistence azurePersistence = new AzurePersistence(container.getDirectoryReference("oak"));
+            AzurePersistenceV8 azurePersistenceV8 = new AzurePersistenceV8(container.getDirectoryReference("oak"));
             WriteAccessController writeAccessController = new WriteAccessController();
             writeAccessController.enableWriting();
-            azurePersistence.setWriteAccessController(writeAccessController);
-            archiveManager = azurePersistence.createArchiveManager(true, false, new IOMonitorAdapter(), new FileStoreMonitorAdapter(), new RemoteStoreMonitorAdapter());
+            azurePersistenceV8.setWriteAccessController(writeAccessController);
+            archiveManager = azurePersistenceV8.createArchiveManager(true, false, new IOMonitorAdapter(), new FileStoreMonitorAdapter(), new RemoteStoreMonitorAdapter());
         } catch (StorageException | InvalidKeyException | URISyntaxException e) {
             throw new IOException(e);
         }

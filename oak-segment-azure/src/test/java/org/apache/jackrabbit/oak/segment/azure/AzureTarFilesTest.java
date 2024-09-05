@@ -19,6 +19,7 @@ package org.apache.jackrabbit.oak.segment.azure;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 
 import org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzuriteDockerRule;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
 import org.apache.jackrabbit.oak.segment.remote.WriteAccessController;
 import org.apache.jackrabbit.oak.segment.spi.monitor.FileStoreMonitorAdapter;
 import org.apache.jackrabbit.oak.segment.spi.monitor.IOMonitorAdapter;
@@ -39,10 +40,10 @@ public class AzureTarFilesTest extends TarFilesTest {
     @Override
     public void setUp() throws Exception {
         container = azurite.getContainer("oak-test");
-        AzurePersistence azurePersistence = new AzurePersistence(container.getDirectoryReference("oak"));
+        AzurePersistenceV8 azurePersistenceV8 = new AzurePersistenceV8(container.getDirectoryReference("oak"));
         WriteAccessController writeAccessController = new WriteAccessController();
         writeAccessController.enableWriting();
-        azurePersistence.setWriteAccessController(writeAccessController);
+        azurePersistenceV8.setWriteAccessController(writeAccessController);
         tarFiles = TarFiles.builder()
                 .withDirectory(folder.newFolder())
                 .withTarRecovery((id, data, recovery) -> {
@@ -52,7 +53,7 @@ public class AzureTarFilesTest extends TarFilesTest {
                 .withFileStoreMonitor(new FileStoreMonitorAdapter())
                 .withRemoteStoreMonitor(new RemoteStoreMonitorAdapter())
                 .withMaxFileSize(MAX_FILE_SIZE)
-                .withPersistence(azurePersistence)
+                .withPersistence(azurePersistenceV8)
                 .build();
     }
 }

@@ -23,6 +23,7 @@ import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.read.ListAppender;
+import com.azure.storage.blob.BlobContainerClient;
 import com.microsoft.azure.storage.StorageCredentials;
 import com.microsoft.azure.storage.StorageCredentialsAccountAndKey;
 import com.microsoft.azure.storage.StorageCredentialsSharedAccessSignature;
@@ -83,10 +84,6 @@ public class ToolUtilsTest {
         this.azureStorageCredentialManager = new AzureStorageCredentialManager();
     }
 
-    @After
-    public void clear() {
-        this.azureStorageCredentialManager.close();
-    }
 
     @Test
     public void createCloudBlobDirectoryWithAccessKey() {
@@ -149,9 +146,9 @@ public class ToolUtilsTest {
         String containerName = "oak";
         String segmentStorePath = String.format(SEGMENT_STORE_PATH_FORMAT, accountName, containerName, DEFAULT_REPO_DIR);
 
-        CloudBlobDirectory cloudBlobDirectory = ToolUtils.createCloudBlobDirectory(segmentStorePath, ENVIRONMENT, azureStorageCredentialManager);
+        BlobContainerClient cloudBlobDirectory = ToolUtils.createCloudBlobDirectory(segmentStorePath, ENVIRONMENT, azureStorageCredentialManager);
         assertNotNull(cloudBlobDirectory);
-        assertEquals(containerName, cloudBlobDirectory.getContainer().getName());
+        assertEquals(containerName, cloudBlobDirectory.getBlobContainerName());
     }
 
     private static <T extends StorageCredentials> T expectCredentials(Class<T> clazz, Runnable body, String containerUrl) {
@@ -159,12 +156,6 @@ public class ToolUtilsTest {
         try (MockedStatic<AzureUtilities> mockedAzureUtilities = mockStatic(AzureUtilities.class)) {
             body.run();
 
-            mockedAzureUtilities.verify(() -> AzureUtilities.cloudBlobDirectoryFrom(
-                    credentialsCaptor.capture(),
-                    eq(containerUrl),
-                    eq(DEFAULT_REPO_DIR)
-                )
-            );
             return credentialsCaptor.getValue();
         }
     }

@@ -31,6 +31,7 @@ import java.util.stream.StreamSupport;
 
 import org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzuriteDockerRule;
 import org.apache.jackrabbit.oak.segment.azure.util.Environment;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
 import org.apache.jackrabbit.oak.segment.spi.persistence.SegmentNodeStorePersistence;
 import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
 import org.jetbrains.annotations.NotNull;
@@ -40,10 +41,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.osgi.util.converter.Converters;
 
-import static org.apache.jackrabbit.oak.segment.azure.AzureUtilities.AZURE_ACCOUNT_NAME;
-import static org.apache.jackrabbit.oak.segment.azure.AzureUtilities.AZURE_CLIENT_ID;
-import static org.apache.jackrabbit.oak.segment.azure.AzureUtilities.AZURE_CLIENT_SECRET;
-import static org.apache.jackrabbit.oak.segment.azure.AzureUtilities.AZURE_TENANT_ID;
+import static org.apache.jackrabbit.oak.segment.azure.v8.AzureUtilitiesV8.AZURE_ACCOUNT_NAME;
+import static org.apache.jackrabbit.oak.segment.azure.v8.AzureUtilitiesV8.AZURE_CLIENT_ID;
+import static org.apache.jackrabbit.oak.segment.azure.v8.AzureUtilitiesV8.AZURE_CLIENT_SECRET;
+import static org.apache.jackrabbit.oak.segment.azure.v8.AzureUtilitiesV8.AZURE_TENANT_ID;
 
 import static com.microsoft.azure.storage.blob.SharedAccessBlobPermissions.ADD;
 import static com.microsoft.azure.storage.blob.SharedAccessBlobPermissions.CREATE;
@@ -57,7 +58,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeNotNull;
 
-public class AzureSegmentStoreServiceTest {
+public class AzureSegmentStoreServiceV8Test {
     private static final Environment ENVIRONMENT = new Environment();
 
     @ClassRule
@@ -217,7 +218,7 @@ public class AzureSegmentStoreServiceTest {
     }
 
     private static CloudBlobContainer getContainerFrom(SegmentNodeStorePersistence persistence) throws Exception {
-        return ((AzurePersistence) persistence).getSegmentstoreDirectory().getContainer();
+        return ((AzurePersistenceV8) persistence).getSegmentstoreDirectory().getContainer();
     }
 
     private static void assertWriteAccessNotGranted(SegmentNodeStorePersistence persistence) {

@@ -20,6 +20,7 @@ package org.apache.jackrabbit.oak.segment.azure;
 
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
 import org.apache.jackrabbit.oak.segment.remote.WriteAccessController;
 import org.apache.jackrabbit.oak.segment.spi.monitor.FileStoreMonitorAdapter;
 import org.apache.jackrabbit.oak.segment.spi.monitor.IOMonitorAdapter;
@@ -47,7 +48,7 @@ import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.model.HttpResponse.response;
 import static org.mockserver.verify.VerificationTimes.exactly;
 
-public class AzureSegmentArchiveWriterTest {
+public class AzureSegmentArchiveWriterV8Test {
     public static final String BASE_PATH = "/devstoreaccount1/oak-test";
     public static final int MAX_ATTEMPTS = 3;
 
@@ -170,9 +171,9 @@ public class AzureSegmentArchiveWriterTest {
     private SegmentArchiveWriter createSegmentArchiveWriter() throws URISyntaxException, IOException {
         WriteAccessController writeAccessController = new WriteAccessController();
         writeAccessController.enableWriting();
-        AzurePersistence azurePersistence = new AzurePersistence(container.getDirectoryReference("oak"));/**/
-        azurePersistence.setWriteAccessController(writeAccessController);
-        SegmentArchiveManager manager = azurePersistence.createArchiveManager(false, false, new IOMonitorAdapter(), new FileStoreMonitorAdapter(), new RemoteStoreMonitorAdapter());
+        AzurePersistenceV8 azurePersistenceV8 = new AzurePersistenceV8(container.getDirectoryReference("oak"));/**/
+        azurePersistenceV8.setWriteAccessController(writeAccessController);
+        SegmentArchiveManager manager = azurePersistenceV8.createArchiveManager(false, false, new IOMonitorAdapter(), new FileStoreMonitorAdapter(), new RemoteStoreMonitorAdapter());
         SegmentArchiveWriter writer = manager.create("data00000a.tar");
         return writer;
     }

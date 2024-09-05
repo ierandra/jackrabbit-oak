@@ -21,7 +21,7 @@ import com.microsoft.azure.storage.blob.CloudAppendBlob;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 
 import org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzuriteDockerRule;
-import org.apache.jackrabbit.oak.segment.azure.ReverseFileReader;
+import org.apache.jackrabbit.oak.segment.azure.v8.ReverseFileReaderV8;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -35,7 +35,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
-public class ReverseFileReaderTest {
+public class ReverseFileReaderV8Test {
 
     @ClassRule
     public static AzuriteDockerRule azurite = new AzuriteDockerRule();
@@ -55,21 +55,21 @@ public class ReverseFileReaderTest {
     @Test
     public void testReverseReader() throws IOException, URISyntaxException, StorageException {
         List<String> entries = createFile( 1024, 80);
-        ReverseFileReader reader = new ReverseFileReader(getBlob(), 256);
+        ReverseFileReaderV8 reader = new ReverseFileReaderV8(getBlob(), 256);
         assertEquals(entries, reader);
     }
 
     @Test
     public void testEmptyFile() throws IOException, URISyntaxException, StorageException {
         List<String> entries = createFile( 0, 80);
-        ReverseFileReader reader = new ReverseFileReader(getBlob(), 256);
+        ReverseFileReaderV8 reader = new ReverseFileReaderV8(getBlob(), 256);
         assertEquals(entries, reader);
     }
 
     @Test
     public void test1ByteBlock() throws IOException, URISyntaxException, StorageException {
         List<String> entries = createFile( 10, 16);
-        ReverseFileReader reader = new ReverseFileReader(getBlob(), 1);
+        ReverseFileReaderV8 reader = new ReverseFileReaderV8(getBlob(), 1);
         assertEquals(entries, reader);
     }
 
@@ -94,7 +94,7 @@ public class ReverseFileReaderTest {
         return entries;
     }
 
-    private static void assertEquals(List<String> entries, ReverseFileReader reader) throws IOException {
+    private static void assertEquals(List<String> entries, ReverseFileReaderV8 reader) throws IOException {
         int i = entries.size();
         for (String e : entries) {
             Assert.assertEquals("line " + (--i), e, reader.readLine());

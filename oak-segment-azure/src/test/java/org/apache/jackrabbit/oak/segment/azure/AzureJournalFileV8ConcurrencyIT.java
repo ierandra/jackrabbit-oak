@@ -21,6 +21,7 @@ import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 
+import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
 import org.apache.jackrabbit.oak.segment.spi.persistence.JournalFile;
 import org.apache.jackrabbit.oak.segment.spi.persistence.JournalFileReader;
 import org.apache.jackrabbit.oak.segment.spi.persistence.JournalFileWriter;
@@ -39,14 +40,14 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class AzureJournalFileConcurrencyIT {
-    private static final Logger log = LoggerFactory.getLogger(AzureJournalFileConcurrencyIT.class);
+public class AzureJournalFileV8ConcurrencyIT {
+    private static final Logger log = LoggerFactory.getLogger(AzureJournalFileV8ConcurrencyIT.class);
 
     private static CloudBlobContainer container;
 
     private static int suffix;
 
-    private AzurePersistence persistence;
+    private AzurePersistenceV8 persistence;
 
     @BeforeClass
     public static void connectToAzure() throws URISyntaxException, InvalidKeyException, StorageException {
@@ -60,7 +61,7 @@ public class AzureJournalFileConcurrencyIT {
 
     @Before
     public void setup() throws StorageException, InvalidKeyException, URISyntaxException, IOException, InterruptedException {
-        persistence = new AzurePersistence(container.getDirectoryReference("oak-" + (suffix++)));
+        persistence = new AzurePersistenceV8(container.getDirectoryReference("oak-" + (suffix++)));
         writeJournalLines(300, 0);
         log.info("Finished writing initial content to journal!");
     }
