@@ -91,9 +91,7 @@ public class AzureRepositoryLock implements RepositoryLock {
         Exception ex = null;
         do {
             try {
-                if (!blockBlobClient.exists()) {
-                    blockBlobClient.upload(BinaryData.fromString(""));
-                }
+                blockBlobClient.getBlobOutputStream().close();
 
                 log.info("{} = {}", LEASE_DURATION_PROP, leaseDuration);
                 log.info("{} = {}", RENEWAL_INTERVAL_PROP, renewalInterval);

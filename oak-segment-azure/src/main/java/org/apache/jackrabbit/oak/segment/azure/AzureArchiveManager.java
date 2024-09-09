@@ -176,7 +176,7 @@ public class AzureArchiveManager implements SegmentArchiveManager {
         List<RecoveredEntry> entryList = new ArrayList<>();
 
         for (BlobItem b : getBlobs(archiveName)) {
-            String name = b.getName();
+            String name = AzureUtilities.getName(b);
             Matcher m = pattern.matcher(name);
             if (!m.matches()) {
                 continue;
@@ -211,7 +211,7 @@ public class AzureArchiveManager implements SegmentArchiveManager {
     private void delete(String archiveName, Set<UUID> recoveredEntries) throws IOException {
         getBlobs(archiveName)
                 .forEach(cloudBlob -> {
-                    if (!recoveredEntries.contains(RemoteUtilities.getSegmentUUID(cloudBlob.getName()))) {
+                    if (!recoveredEntries.contains(RemoteUtilities.getSegmentUUID(AzureUtilities.getName(cloudBlob)))) {
                         try {
                             blobContainerClient.getBlobClient(cloudBlob.getName()).delete();
                         } catch (BlobStorageException e) {
@@ -238,7 +238,7 @@ public class AzureArchiveManager implements SegmentArchiveManager {
 
     private List<BlobItem> getBlobs(String archiveName) throws IOException {
         ListBlobsOptions listOptions = new ListBlobsOptions();
-        listOptions.setPrefix(archiveName);
+        listOptions.setPrefix(getDirectory(archiveName));
 
         return blobContainerClient.listBlobs(listOptions, null).stream().collect(Collectors.toList());
     }

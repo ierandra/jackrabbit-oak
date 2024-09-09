@@ -16,6 +16,7 @@
  */
 package org.apache.jackrabbit.oak.segment.azure;
 
+import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobStorageException;
 import com.azure.storage.blob.specialized.AppendBlobClient;
 import com.azure.storage.blob.specialized.BlockBlobClient;
@@ -45,6 +46,10 @@ public final class AzureUtilities {
 
     public static String getName(AppendBlobClient appendBlobClient) {
         return Paths.get(appendBlobClient.getBlobName()).getFileName().toString();
+    }
+
+    public static String getName(BlobItem blobItem) {
+        return Paths.get(blobItem.getName()).getFileName().toString();
     }
 
     public static void readBufferFully(BlockBlobClient blob, Buffer buffer) throws IOException {

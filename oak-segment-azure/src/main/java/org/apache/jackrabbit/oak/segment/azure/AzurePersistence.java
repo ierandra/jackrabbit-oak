@@ -116,6 +116,9 @@ public class AzurePersistence implements SegmentNodeStorePersistence {
         });*/
     }
 
+    public BlobContainerClient getBlobContainerClient() {
+        return blobContainerClient;
+    }
 
     public void setWriteAccessController(WriteAccessController writeAccessController) {
         this.writeAccessController = writeAccessController;

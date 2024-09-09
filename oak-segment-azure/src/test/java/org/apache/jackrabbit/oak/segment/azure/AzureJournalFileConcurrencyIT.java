@@ -16,20 +16,12 @@
  */
 package org.apache.jackrabbit.oak.segment.azure;
 
-import com.microsoft.azure.storage.CloudStorageAccount;
-import com.microsoft.azure.storage.StorageException;
-import com.microsoft.azure.storage.blob.CloudBlobClient;
-import com.microsoft.azure.storage.blob.CloudBlobContainer;
-
-import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.models.BlobStorageException;
 import org.apache.jackrabbit.oak.segment.spi.persistence.JournalFile;
 import org.apache.jackrabbit.oak.segment.spi.persistence.JournalFileReader;
 import org.apache.jackrabbit.oak.segment.spi.persistence.JournalFileWriter;
-import org.junit.AfterClass;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,34 +32,34 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class AzureJournalFileV8ConcurrencyIT {
-    private static final Logger log = LoggerFactory.getLogger(AzureJournalFileV8ConcurrencyIT.class);
+public class AzureJournalFileConcurrencyIT {
+    private static final Logger log = LoggerFactory.getLogger(AzureJournalFileConcurrencyIT.class);
 
-    private static CloudBlobContainer container;
+    @ClassRule
+    public static AzuriteDockerRule azurite = new AzuriteDockerRule();
+
+    private static BlobContainerClient container;
 
     private static int suffix;
 
-    private AzurePersistenceV8 persistence;
+    private AzurePersistence persistence;
 
     @BeforeClass
-    public static void connectToAzure() throws URISyntaxException, InvalidKeyException, StorageException {
-        String azureConnectionString = System.getenv("AZURE_CONNECTION");
-        Assume.assumeNotNull(azureConnectionString);
-        CloudBlobClient client = CloudStorageAccount.parse(azureConnectionString).createCloudBlobClient();
-        container = client.getContainerReference("oak-test-" + System.currentTimeMillis());
+    public static void connectToAzure() throws BlobStorageException {
+        container = azurite.getContainer("oak-test-" + System.currentTimeMillis());
         container.createIfNotExists();
         suffix = 1;
     }
 
     @Before
-    public void setup() throws StorageException, InvalidKeyException, URISyntaxException, IOException, InterruptedException {
-        persistence = new AzurePersistenceV8(container.getDirectoryReference("oak-" + (suffix++)));
+    public void setup() throws BlobStorageException, InvalidKeyException, URISyntaxException, IOException, InterruptedException {
+        persistence = new AzurePersistence(container, ("oak-" + (suffix++)));
         writeJournalLines(300, 0);
         log.info("Finished writing initial content to journal!");
     }
 
     @AfterClass
-    public static void cleanupContainer() throws StorageException {
+    public static void cleanupContainer() throws BlobStorageException {
         if (container != null) {
             container.deleteIfExists();
         }

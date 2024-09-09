@@ -14,30 +14,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.jackrabbit.oak.segment.azure;
+package org.apache.jackrabbit.oak.segment.azure.v8;
 
-import com.azure.storage.blob.BlobContainerClient;
-import org.apache.jackrabbit.oak.segment.file.tar.TarFiles;
-import org.apache.jackrabbit.oak.segment.file.tar.TarFilesTest;
+import com.microsoft.azure.storage.blob.CloudBlobContainer;
+
+import org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzuriteDockerRule;
 import org.apache.jackrabbit.oak.segment.remote.WriteAccessController;
 import org.apache.jackrabbit.oak.segment.spi.monitor.FileStoreMonitorAdapter;
 import org.apache.jackrabbit.oak.segment.spi.monitor.IOMonitorAdapter;
+import org.apache.jackrabbit.oak.segment.file.tar.TarFiles;
+import org.apache.jackrabbit.oak.segment.file.tar.TarFilesTest;
 import org.apache.jackrabbit.oak.segment.spi.monitor.RemoteStoreMonitorAdapter;
 import org.junit.Before;
 import org.junit.ClassRule;
 
-public class AzureTarFilesTest extends TarFilesTest {
+public class AzureTarFilesV8Test extends TarFilesTest {
 
     @ClassRule
     public static AzuriteDockerRule azurite = new AzuriteDockerRule();
 
-    private BlobContainerClient container;
+    private CloudBlobContainer container;
 
     @Before
     @Override
     public void setUp() throws Exception {
         container = azurite.getContainer("oak-test");
-        AzurePersistence azurePersistenceV8 = new AzurePersistence(container, "oak");
+        AzurePersistenceV8 azurePersistenceV8 = new AzurePersistenceV8(container.getDirectoryReference("oak"));
         WriteAccessController writeAccessController = new WriteAccessController();
         writeAccessController.enableWriting();
         azurePersistenceV8.setWriteAccessController(writeAccessController);

@@ -43,7 +43,7 @@ public class AzureGCJournalFile implements GCJournalFile {
             if (!gcJournal.exists()) {
                 gcJournal.createIfNotExists();
             }
-            gcJournal.appendBlock(new ByteArrayInputStream((line + "\n").getBytes(Charsets.UTF_8)), line.length());
+            gcJournal.getBlobOutputStream().write((line + "\n").getBytes());
         } catch (BlobStorageException e) {
             throw new IOException(e);
         }
