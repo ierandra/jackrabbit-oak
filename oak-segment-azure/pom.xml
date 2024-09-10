@@ -93,6 +93,7 @@
                             azure-core,
                             azure-identity,
                             azure-json,
+                            azure-xml,
                             jackson-dataformat-xml,
                             jackson-annotations,
                             guava,
@@ -238,6 +239,10 @@
         <dependency>
             <groupId>com.azure</groupId>
             <artifactId>azure-json</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-xml</artifactId>
         </dependency>
         <dependency>
             <groupId>org.reactivestreams</groupId>

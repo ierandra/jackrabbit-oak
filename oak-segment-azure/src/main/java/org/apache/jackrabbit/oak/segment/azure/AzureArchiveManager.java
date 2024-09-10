@@ -107,7 +107,7 @@ public class AzureArchiveManager implements SegmentArchiveManager {
     public SegmentArchiveReader open(String archiveName) throws IOException {
         try {
             boolean isArchiveClosed = blobContainerClient.getBlobClient(rootPrefix + "/" + archiveName + "/closed").getBlockBlobClient().exists();
-            if (isArchiveClosed) {
+            if (!isArchiveClosed) {
                 return null;
             }
             return new AzureSegmentArchiveReader(blobContainerClient, rootPrefix, archiveName, ioMonitor);

@@ -333,7 +333,7 @@ public class AzureArchiveManagerTest {
     }
 
     @Test(expected = SegmentNotFoundException.class)
-    public void testMissngSegmentDetectedInFileStore() throws IOException, BlobStorageException, InvalidFileStoreVersionException {
+    public void testMissingSegmentDetectedInFileStore() throws IOException, BlobStorageException, InvalidFileStoreVersionException {
 
         AzurePersistence azurePersistence = new AzurePersistence(container,"oak");
         FileStore fileStore = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(azurePersistence).build();
