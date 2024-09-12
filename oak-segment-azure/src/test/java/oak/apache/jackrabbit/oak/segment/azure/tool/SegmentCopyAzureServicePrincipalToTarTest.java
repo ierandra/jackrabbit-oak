@@ -20,7 +20,7 @@ package oak.apache.jackrabbit.oak.segment.azure.tool;
 
 import com.microsoft.azure.storage.blob.CloudBlobDirectory;
 import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
-import org.apache.jackrabbit.oak.segment.azure.AzureStorageCredentialManager;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzureStorageCredentialManagerV8;
 import org.apache.jackrabbit.oak.segment.azure.tool.ToolUtils;
 import org.apache.jackrabbit.oak.segment.azure.util.Environment;
 import org.apache.jackrabbit.oak.segment.spi.persistence.SegmentNodeStorePersistence;
@@ -54,8 +54,8 @@ public class SegmentCopyAzureServicePrincipalToTarTest extends SegmentCopyTestBa
         String accountName = ENVIRONMENT.getVariable(AZURE_ACCOUNT_NAME);
         String path = String.format(SEGMENT_STORE_PATH_FORMAT, accountName, CONTAINER_NAME, DIR);
         CloudBlobDirectory cloudBlobDirectory;
-        try (AzureStorageCredentialManager azureStorageCredentialManager = new AzureStorageCredentialManager()) {
-            cloudBlobDirectory = ToolUtils.createCloudBlobDirectory(path, ENVIRONMENT, azureStorageCredentialManager);
+        try (AzureStorageCredentialManagerV8 azureStorageCredentialManagerV8 = new AzureStorageCredentialManagerV8()) {
+            cloudBlobDirectory = ToolUtils.createCloudBlobDirectory(path, ENVIRONMENT, azureStorageCredentialManagerV8);
         }
         return new AzurePersistenceV8(cloudBlobDirectory);
     }

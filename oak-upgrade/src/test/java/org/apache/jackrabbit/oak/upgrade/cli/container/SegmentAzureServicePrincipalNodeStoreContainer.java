@@ -20,7 +20,7 @@ import com.microsoft.azure.storage.blob.CloudBlobDirectory;
 import org.apache.jackrabbit.guava.common.io.Files;
 import org.apache.jackrabbit.oak.segment.SegmentNodeStoreBuilders;
 import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
-import org.apache.jackrabbit.oak.segment.azure.AzureStorageCredentialManager;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzureStorageCredentialManagerV8;
 import org.apache.jackrabbit.oak.segment.azure.v8.AzureUtilitiesV8;
 import org.apache.jackrabbit.oak.segment.azure.tool.ToolUtils;
 import org.apache.jackrabbit.oak.segment.azure.util.Environment;
@@ -44,7 +44,7 @@ public class SegmentAzureServicePrincipalNodeStoreContainer implements NodeStore
     private FileStore fs;
     private File tmpDir;
     private AzurePersistenceV8 azurePersistenceV8;
-    private final AzureStorageCredentialManager azureStorageCredentialManager;
+    private final AzureStorageCredentialManagerV8 azureStorageCredentialManagerV8;
 
     public SegmentAzureServicePrincipalNodeStoreContainer() {
         this(null);
@@ -52,7 +52,7 @@ public class SegmentAzureServicePrincipalNodeStoreContainer implements NodeStore
 
     public SegmentAzureServicePrincipalNodeStoreContainer(BlobStore blobStore) {
         this.blobStore = blobStore;
-        this.azureStorageCredentialManager = new AzureStorageCredentialManager();
+        this.azureStorageCredentialManagerV8 = new AzureStorageCredentialManagerV8();
     }
 
 
@@ -86,7 +86,7 @@ public class SegmentAzureServicePrincipalNodeStoreContainer implements NodeStore
         }
         String path = String.format(AZURE_SEGMENT_STORE_PATH, ENVIRONMENT.getVariable(AzureUtilitiesV8.AZURE_ACCOUNT_NAME),
                 CONTAINER_NAME, DIR);
-        CloudBlobDirectory cloudBlobDirectory = ToolUtils.createCloudBlobDirectory(path, ENVIRONMENT, azureStorageCredentialManager);
+        CloudBlobDirectory cloudBlobDirectory = ToolUtils.createCloudBlobDirectory(path, ENVIRONMENT, azureStorageCredentialManagerV8);
         return new AzurePersistenceV8(cloudBlobDirectory);
     }
 
@@ -99,8 +99,8 @@ public class SegmentAzureServicePrincipalNodeStoreContainer implements NodeStore
         if (tmpDir != null) {
             tmpDir.delete();
         }
-        if (azureStorageCredentialManager != null) {
-            azureStorageCredentialManager.close();
+        if (azureStorageCredentialManagerV8 != null) {
+            azureStorageCredentialManagerV8.close();
         }
     }
 

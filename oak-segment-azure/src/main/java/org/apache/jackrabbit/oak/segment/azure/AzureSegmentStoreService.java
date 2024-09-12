@@ -18,13 +18,9 @@
  */
 package org.apache.jackrabbit.oak.segment.azure;
 
-import com.microsoft.azure.storage.CloudStorageAccount;
-import com.microsoft.azure.storage.LocationMode;
-import com.microsoft.azure.storage.StorageCredentials;
-import com.microsoft.azure.storage.StorageException;
-import com.microsoft.azure.storage.blob.BlobRequestOptions;
-import com.microsoft.azure.storage.blob.CloudBlobClient;
-import com.microsoft.azure.storage.blob.CloudBlobContainer;
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobContainerClientBuilder;
+import com.azure.storage.blob.models.BlobStorageException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
 import org.apache.jackrabbit.oak.segment.azure.v8.AzureSegmentStoreServiceV8;
@@ -40,8 +36,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.security.InvalidKeyException;
 import java.util.Hashtable;
 import java.util.Objects;
 
@@ -62,7 +56,6 @@ public class AzureSegmentStoreService {
     public static final String DEFAULT_ENDPOINT_SUFFIX = "core.windows.net";
 
     private ServiceRegistration registration;
-    private static AzureStorageCredentialManager azureStorageCredentialManager;
 
     private final boolean useAzureSdkV12 = Boolean.getBoolean("segment.azure.v12.enabled");
 
@@ -71,10 +64,10 @@ public class AzureSegmentStoreService {
     public void activate(ComponentContext context, Configuration config) throws IOException {
         if (useAzureSdkV12) {
             log.info("Starting nodestore using Azure SDK 12");
-            AzurePersistenceV8 persistence = AzureSegmentStoreServiceV8.createAzurePersistenceFrom(config);
+            AzurePersistence persistence = createAzurePersistenceFrom(config);
             registration = context.getBundleContext()
                     .registerService(SegmentNodeStorePersistence.class, persistence, new Hashtable<String, Object>() {{
-                        put(SERVICE_PID, String.format("%s(%s, %s)", AzurePersistenceV8.class.getName(), config.accountName(), config.rootPath()));
+                        put(SERVICE_PID, String.format("%s(%s, %s)", AzurePersistence.class.getName(), config.accountName(), config.rootPath()));
                         if (!Objects.equals(config.role(), "")) {
                             put("role", config.role());
                         }
@@ -98,12 +91,9 @@ public class AzureSegmentStoreService {
             registration.unregister();
             registration = null;
         }
-        if (azureStorageCredentialManager != null) {
-            azureStorageCredentialManager.close();
-        }
     }
 
-    private static AzurePersistenceV8 createAzurePersistenceFrom(Configuration configuration) throws IOException {
+    private static AzurePersistence createAzurePersistenceFrom(Configuration configuration) throws IOException {
         if (!StringUtils.isBlank(configuration.connectionURL())) {
             return createPersistenceFromConnectionURL(configuration);
         }
@@ -116,7 +106,7 @@ public class AzureSegmentStoreService {
         return createPersistenceFromAccessKey(configuration);
     }
 
-    private static AzurePersistenceV8 createPersistenceFromAccessKey(Configuration configuration) throws IOException {
+    private static AzurePersistence createPersistenceFromAccessKey(Configuration configuration) throws IOException {
         StringBuilder connectionString = new StringBuilder();
         connectionString.append("DefaultEndpointsProtocol=https;");
         connectionString.append("AccountName=").append(configuration.accountName()).append(';');
@@ -127,7 +117,7 @@ public class AzureSegmentStoreService {
         return createAzurePersistence(connectionString.toString(), configuration, true);
     }
 
-    private static AzurePersistenceV8 createPersistenceFromSasUri(Configuration configuration) throws IOException {
+    private static AzurePersistence createPersistenceFromSasUri(Configuration configuration) throws IOException {
         StringBuilder connectionString = new StringBuilder();
         connectionString.append("DefaultEndpointsProtocol=https;");
         connectionString.append("AccountName=").append(configuration.accountName()).append(';');
@@ -139,50 +129,51 @@ public class AzureSegmentStoreService {
     }
 
     @NotNull
-    private static AzurePersistenceV8 createPersistenceFromConnectionURL(Configuration configuration) throws IOException {
+    private static AzurePersistence createPersistenceFromConnectionURL(Configuration configuration) throws IOException {
         return createAzurePersistence(configuration.connectionURL(), configuration, true);
     }
 
     @NotNull
-    private static AzurePersistenceV8 createPersistenceFromServicePrincipalCredentials(Configuration configuration) throws IOException {
-        azureStorageCredentialManager = new AzureStorageCredentialManager();
-        StorageCredentials storageCredentialsToken = azureStorageCredentialManager.getStorageCredentialAccessTokenFromServicePrincipals(configuration.accountName(), configuration.clientId(), configuration.clientSecret(), configuration.tenantId());
+    private static AzurePersistence createPersistenceFromServicePrincipalCredentials(Configuration configuration) throws IOException {
+        AzureBlobContainerClientManager azureBlobContainerClientManager = new AzureBlobContainerClientManager();
+        BlobContainerClient blobContainerClient = azureBlobContainerClientManager.getBlobContainerClientFromServicePrincipals(configuration.accountName(), configuration.containerName(), configuration.clientId(), configuration.clientSecret(), configuration.tenantId());
 
         try {
-            CloudStorageAccount cloud = new CloudStorageAccount(storageCredentialsToken, true, DEFAULT_ENDPOINT_SUFFIX, configuration.accountName());
-            return createAzurePersistence(cloud, configuration, true);
-        } catch (StorageException | URISyntaxException e) {
+            return createAzurePersistence(blobContainerClient, configuration, true);
+        } catch (BlobStorageException e) {
             throw new IOException(e);
         }
     }
 
     @NotNull
-    private static AzurePersistenceV8 createAzurePersistence(String connectionString, Configuration configuration, boolean createContainer) throws IOException {
+    private static AzurePersistence createAzurePersistence(String connectionString, Configuration configuration, boolean createContainer) throws IOException {
         try {
-            CloudStorageAccount cloud = CloudStorageAccount.parse(connectionString);
-            log.info("Connection string: '{}'", cloud);
-            return createAzurePersistence(cloud, configuration, createContainer);
-        } catch (StorageException | URISyntaxException | InvalidKeyException e) {
+            BlobContainerClient blobContainerClient = new BlobContainerClientBuilder()
+                    .connectionString(connectionString)
+                    .containerName(configuration.containerName())
+                    .buildClient();
+
+            return createAzurePersistence(blobContainerClient, configuration, createContainer);
+        } catch (BlobStorageException e) {
             throw new IOException(e);
         }
     }
 
     @NotNull
-    private static AzurePersistenceV8 createAzurePersistence(CloudStorageAccount cloud, Configuration configuration, boolean createContainer) throws URISyntaxException, StorageException {
-        CloudBlobClient cloudBlobClient = cloud.createCloudBlobClient();
-        BlobRequestOptions blobRequestOptions = new BlobRequestOptions();
+    private static AzurePersistence createAzurePersistence(BlobContainerClient blobContainerClient, Configuration configuration, boolean createContainer) throws BlobStorageException {
 
-        if (configuration.enableSecondaryLocation()) {
+        //TODO: ierandra
+        /*if (configuration.enableSecondaryLocation()) {
             blobRequestOptions.setLocationMode(LocationMode.PRIMARY_THEN_SECONDARY);
         }
         cloudBlobClient.setDefaultRequestOptions(blobRequestOptions);
+         */
 
-        CloudBlobContainer container = cloudBlobClient.getContainerReference(configuration.containerName());
-        if (createContainer && !container.exists()) {
-            container.create();
+        if (createContainer) {
+            blobContainerClient.createIfNotExists();
         }
         String path = normalizePath(configuration.rootPath());
-        return new AzurePersistenceV8(container.getDirectoryReference(path));
+        return new AzurePersistence(blobContainerClient, path);
     }
 
     @NotNull

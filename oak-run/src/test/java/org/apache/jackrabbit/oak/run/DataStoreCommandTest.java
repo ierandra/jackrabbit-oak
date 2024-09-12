@@ -75,7 +75,7 @@ import org.apache.jackrabbit.oak.plugins.index.lucene.directory.OakDirectory;
 import org.apache.jackrabbit.oak.run.cli.BlobStoreOptions.Type;
 import org.apache.jackrabbit.oak.segment.SegmentNodeStore;
 import org.apache.jackrabbit.oak.segment.SegmentNodeStoreBuilders;
-import org.apache.jackrabbit.oak.segment.azure.AzureStorageCredentialManager;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzureStorageCredentialManagerV8;
 import org.apache.jackrabbit.oak.segment.azure.v8.AzureUtilitiesV8;
 import org.apache.jackrabbit.oak.segment.azure.tool.ToolUtils;
 import org.apache.jackrabbit.oak.segment.compaction.SegmentGCOptions;
@@ -1141,7 +1141,7 @@ public class DataStoreCommandTest {
         class AzureSegmentStoreFixture extends SegmentStoreFixture {
             private static final String AZURE_DIR = "repository";
             private String container;
-            private final AzureStorageCredentialManager azureStorageCredentialManager = new AzureStorageCredentialManager();
+            private final AzureStorageCredentialManagerV8 azureStorageCredentialManagerV8 = new AzureStorageCredentialManagerV8();
 
             @Override public NodeStore init(DataStoreBlobStore blobStore, File storeFile) throws Exception {
                 Properties props = AzureDataStoreUtils.getAzureConfig();
@@ -1158,7 +1158,7 @@ public class DataStoreCommandTest {
 
                 // initialize azure segment for test setup
                 SegmentNodeStorePersistence segmentNodeStorePersistence =
-                    ToolUtils.newSegmentNodeStorePersistence(ToolUtils.SegmentStoreType.AZURE, storePath, azureStorageCredentialManager);
+                    ToolUtils.newSegmentNodeStorePersistence(ToolUtils.SegmentStoreType.AZURE, storePath, azureStorageCredentialManagerV8);
                 fileStore = fileStoreBuilder(storeFile).withBlobStore(blobStore)
                     .withCustomPersistence(segmentNodeStorePersistence).build();
 
@@ -1190,7 +1190,7 @@ public class DataStoreCommandTest {
             public void after() {
                 try {
                     AzureDataStoreUtils.deleteContainer(container);
-                    azureStorageCredentialManager.close();
+                    azureStorageCredentialManagerV8.close();
                 } catch(Exception e) {
                     log.error("Error in cleaning the container {}", container, e);
                 }

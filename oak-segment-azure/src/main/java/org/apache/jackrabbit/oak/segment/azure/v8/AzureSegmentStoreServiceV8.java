@@ -28,7 +28,6 @@ import com.microsoft.azure.storage.blob.BlobRequestOptions;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.jackrabbit.oak.segment.azure.AzureStorageCredentialManager;
 import org.apache.jackrabbit.oak.segment.azure.Configuration;
 import org.jetbrains.annotations.NotNull;
 import org.osgi.framework.ServiceRegistration;
@@ -56,7 +55,7 @@ public class AzureSegmentStoreServiceV8 {
     public static final String DEFAULT_ENDPOINT_SUFFIX = "core.windows.net";
 
     private ServiceRegistration registration;
-    private static AzureStorageCredentialManager azureStorageCredentialManager;
+    private static AzureStorageCredentialManagerV8 azureStorageCredentialManagerV8;
 
     public static AzurePersistenceV8 createAzurePersistenceFrom(Configuration configuration) throws IOException {
         if (!StringUtils.isBlank(configuration.connectionURL())) {
@@ -105,8 +104,8 @@ public class AzureSegmentStoreServiceV8 {
 
     @NotNull
     private static AzurePersistenceV8 createPersistenceFromServicePrincipalCredentials(Configuration configuration) throws IOException {
-        azureStorageCredentialManager = new AzureStorageCredentialManager();
-        StorageCredentials storageCredentialsToken = azureStorageCredentialManager.getStorageCredentialAccessTokenFromServicePrincipals(configuration.accountName(), configuration.clientId(), configuration.clientSecret(), configuration.tenantId());
+        azureStorageCredentialManagerV8 = new AzureStorageCredentialManagerV8();
+        StorageCredentials storageCredentialsToken = azureStorageCredentialManagerV8.getStorageCredentialAccessTokenFromServicePrincipals(configuration.accountName(), configuration.clientId(), configuration.clientSecret(), configuration.tenantId());
 
         try {
             CloudStorageAccount cloud = new CloudStorageAccount(storageCredentialsToken, true, DEFAULT_ENDPOINT_SUFFIX, configuration.accountName());

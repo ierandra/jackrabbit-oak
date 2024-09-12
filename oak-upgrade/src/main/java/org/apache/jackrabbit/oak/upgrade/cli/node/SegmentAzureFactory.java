@@ -25,7 +25,7 @@ import org.apache.jackrabbit.guava.common.io.Closer;
 import org.apache.jackrabbit.guava.common.io.Files;
 import org.apache.jackrabbit.oak.segment.SegmentNodeStoreBuilders;
 import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
-import org.apache.jackrabbit.oak.segment.azure.AzureStorageCredentialManager;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzureStorageCredentialManagerV8;
 import org.apache.jackrabbit.oak.segment.azure.v8.AzureUtilitiesV8;
 import org.apache.jackrabbit.oak.segment.azure.util.Environment;
 import org.apache.jackrabbit.oak.segment.file.FileStore;
@@ -56,7 +56,7 @@ public class SegmentAzureFactory implements NodeStoreFactory {
     private int segmentCacheSize;
     private final boolean readOnly;
     private static final Environment environment = new Environment();
-    private AzureStorageCredentialManager azureStorageCredentialManager;
+    private AzureStorageCredentialManagerV8 azureStorageCredentialManagerV8;
 
     public static class Builder {
         private final String dir;
@@ -163,9 +163,9 @@ public class SegmentAzureFactory implements NodeStoreFactory {
             if (StringUtils.isNotBlank(sasToken)) {
                 credentials = new StorageCredentialsSharedAccessSignature(sasToken);
             } else {
-                this.azureStorageCredentialManager = new AzureStorageCredentialManager();
-                credentials = azureStorageCredentialManager.getStorageCredentialsFromEnvironment(accountName, environment);
-                closer.register(azureStorageCredentialManager);
+                this.azureStorageCredentialManagerV8 = new AzureStorageCredentialManagerV8();
+                credentials = azureStorageCredentialManagerV8.getStorageCredentialsFromEnvironment(accountName, environment);
+                closer.register(azureStorageCredentialManagerV8);
             }
             cloudBlobDirectory = AzureUtilitiesV8.cloudBlobDirectoryFrom(credentials, uri, dir);
         }
