@@ -21,7 +21,7 @@ import org.apache.jackrabbit.oak.api.CommitFailedException;
 import org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzuriteDockerRule;
 import org.apache.jackrabbit.oak.segment.SegmentNodeStore;
 import org.apache.jackrabbit.oak.segment.SegmentNodeStoreBuilders;
-import org.apache.jackrabbit.oak.segment.azure.AzurePersistence;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
 import org.apache.jackrabbit.oak.segment.file.FileStore;
 import org.apache.jackrabbit.oak.segment.file.FileStoreBuilder;
 import org.apache.jackrabbit.oak.segment.file.InvalidFileStoreVersionException;
@@ -71,7 +71,7 @@ public class SplitPersistenceTest {
 
     @Before
     public void setup() throws IOException, InvalidFileStoreVersionException, CommitFailedException, URISyntaxException, InvalidKeyException, StorageException {
-        SegmentNodeStorePersistence sharedPersistence = new AzurePersistence(azurite.getContainer("oak-test").getDirectoryReference("oak"));
+        SegmentNodeStorePersistence sharedPersistence = new AzurePersistenceV8(azurite.getContainer("oak-test").getDirectoryReference("oak"));
 
         baseFileStore = FileStoreBuilder
                 .fileStoreBuilder(folder.newFolder())

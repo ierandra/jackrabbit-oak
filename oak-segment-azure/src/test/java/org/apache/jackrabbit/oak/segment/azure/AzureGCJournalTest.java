@@ -22,6 +22,7 @@ import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 
 import org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzuriteDockerRule;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
 import org.apache.jackrabbit.oak.segment.spi.persistence.SegmentNodeStorePersistence;
 import org.apache.jackrabbit.oak.segment.file.GcJournalTest;
 import org.junit.Before;
@@ -46,7 +47,7 @@ public class AzureGCJournalTest extends GcJournalTest {
 
     @Override
     protected SegmentNodeStorePersistence getPersistence() throws Exception {
-        return new AzurePersistence(container.getDirectoryReference("oak"));
+        return new AzurePersistenceV8(container.getDirectoryReference("oak"));
     }
 
     @Test

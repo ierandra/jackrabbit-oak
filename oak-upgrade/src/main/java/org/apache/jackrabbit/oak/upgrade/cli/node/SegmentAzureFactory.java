@@ -24,9 +24,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.jackrabbit.guava.common.io.Closer;
 import org.apache.jackrabbit.guava.common.io.Files;
 import org.apache.jackrabbit.oak.segment.SegmentNodeStoreBuilders;
-import org.apache.jackrabbit.oak.segment.azure.AzurePersistence;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
 import org.apache.jackrabbit.oak.segment.azure.AzureStorageCredentialManager;
-import org.apache.jackrabbit.oak.segment.azure.AzureUtilities;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzureUtilitiesV8;
 import org.apache.jackrabbit.oak.segment.azure.util.Environment;
 import org.apache.jackrabbit.oak.segment.file.FileStore;
 import org.apache.jackrabbit.oak.segment.file.FileStoreBuilder;
@@ -118,7 +118,7 @@ public class SegmentAzureFactory implements NodeStoreFactory {
 
     @Override
     public NodeStore create(BlobStore blobStore, Closer closer) throws IOException {
-        AzurePersistence azPersistence = null;
+        AzurePersistenceV8 azPersistence = null;
         try {
             azPersistence = createAzurePersistence(closer);
         } catch (StorageException | URISyntaxException | InvalidKeyException e) {
@@ -152,12 +152,12 @@ public class SegmentAzureFactory implements NodeStoreFactory {
         }
     }
 
-    private AzurePersistence createAzurePersistence(Closer closer) throws StorageException, URISyntaxException, InvalidKeyException {
+    private AzurePersistenceV8 createAzurePersistence(Closer closer) throws StorageException, URISyntaxException, InvalidKeyException {
         CloudBlobDirectory cloudBlobDirectory = null;
 
         // connection string will take precedence over accountkey / sas / service principal
         if (StringUtils.isNoneBlank(connectionString, containerName)) {
-            cloudBlobDirectory = AzureUtilities.cloudBlobDirectoryFrom(connectionString, containerName, dir);
+            cloudBlobDirectory = AzureUtilitiesV8.cloudBlobDirectoryFrom(connectionString, containerName, dir);
         } else if (StringUtils.isNoneBlank(accountName, uri)) {
             StorageCredentials credentials = null;
             if (StringUtils.isNotBlank(sasToken)) {
@@ -167,19 +167,19 @@ public class SegmentAzureFactory implements NodeStoreFactory {
                 credentials = azureStorageCredentialManager.getStorageCredentialsFromEnvironment(accountName, environment);
                 closer.register(azureStorageCredentialManager);
             }
-            cloudBlobDirectory = AzureUtilities.cloudBlobDirectoryFrom(credentials, uri, dir);
+            cloudBlobDirectory = AzureUtilitiesV8.cloudBlobDirectoryFrom(credentials, uri, dir);
         }
 
         if (cloudBlobDirectory == null) {
             throw new IllegalArgumentException("Could not connect to Azure storage. Too few connection parameters specified!");
         }
 
-        return new AzurePersistence(cloudBlobDirectory);
+        return new AzurePersistenceV8(cloudBlobDirectory);
     }
 
     @Override
     public boolean hasExternalBlobReferences() throws IOException {
-        AzurePersistence azPersistence = null;
+        AzurePersistenceV8 azPersistence = null;
         Closer closer = Closer.create();
         CliUtils.handleSigInt(closer);
         try {

@@ -21,7 +21,7 @@ import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzuriteDockerRule;
 import org.apache.jackrabbit.oak.segment.spi.persistence.SegmentNodeStorePersistence;
 import org.apache.jackrabbit.oak.segment.file.TarRevisionsTest;
-import org.apache.jackrabbit.oak.segment.azure.AzurePersistence;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
 import org.junit.Before;
 import org.junit.ClassRule;
 
@@ -44,7 +44,7 @@ public class AzureTarRevisionsTest extends TarRevisionsTest {
     @Override
     protected SegmentNodeStorePersistence getPersistence() throws IOException {
         try {
-            return new AzurePersistence(container.getDirectoryReference("oak"));
+            return new AzurePersistenceV8(container.getDirectoryReference("oak"));
         } catch (URISyntaxException e) {
             throw new IOException(e);
         }

@@ -18,7 +18,7 @@ package org.apache.jackrabbit.oak.segment.azure.tool;
 
 import com.google.common.io.Files;
 import com.microsoft.azure.storage.blob.CloudBlobDirectory;
-import org.apache.jackrabbit.oak.segment.azure.AzurePersistence;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
 import org.apache.jackrabbit.oak.segment.azure.AzureStorageCredentialManager;
 import org.apache.jackrabbit.oak.segment.file.FileStoreBuilder;
 import org.apache.jackrabbit.oak.segment.file.JournalReader;
@@ -379,7 +379,7 @@ public class AzureCheck {
         SegmentNodeStorePersistence persistence;
 
         if (cloudBlobDirectory != null) {
-            persistence = new AzurePersistence(cloudBlobDirectory);
+            persistence = new AzurePersistenceV8(cloudBlobDirectory);
         } else {
             persistence = ToolUtils.newSegmentNodeStorePersistence(ToolUtils.SegmentStoreType.AZURE, path, azureStorageCredentialManager);
         }

@@ -32,6 +32,10 @@ import org.apache.jackrabbit.oak.segment.SegmentId;
 import org.apache.jackrabbit.oak.segment.SegmentNodeStore;
 import org.apache.jackrabbit.oak.segment.SegmentNodeStoreBuilders;
 import org.apache.jackrabbit.oak.segment.SegmentNotFoundException;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzureArchiveManagerV8;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzureJournalFileV8;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzureRepositoryLockV8;
 import org.apache.jackrabbit.oak.segment.file.FileStore;
 import org.apache.jackrabbit.oak.segment.file.FileStoreBuilder;
 import org.apache.jackrabbit.oak.segment.file.InvalidFileStoreVersionException;
@@ -82,7 +86,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-public class AzureArchiveManagerTest {
+public class AzureArchiveManagerV8Test {
 
     @ClassRule
     public static AzuriteDockerRule azurite = new AzuriteDockerRule();
@@ -92,7 +96,7 @@ public class AzureArchiveManagerTest {
 
     private CloudBlobContainer container;
 
-    private AzurePersistence azurePersistence;
+    private AzurePersistenceV8 azurePersistenceV8;
 
     @Before
     public void setup() throws StorageException, InvalidKeyException, URISyntaxException {
@@ -100,18 +104,18 @@ public class AzureArchiveManagerTest {
 
         WriteAccessController writeAccessController = new WriteAccessController();
         writeAccessController.enableWriting();
-        azurePersistence = new AzurePersistence(container.getDirectoryReference("oak"));
-        azurePersistence.setWriteAccessController(writeAccessController);
+        azurePersistenceV8 = new AzurePersistenceV8(container.getDirectoryReference("oak"));
+        azurePersistenceV8.setWriteAccessController(writeAccessController);
     }
 
     @Rule
-    public final ProvideSystemProperty systemPropertyRule = new ProvideSystemProperty(AzureRepositoryLock.LEASE_DURATION_PROP, "15")
-            .and(AzureRepositoryLock.RENEWAL_INTERVAL_PROP, "3")
-            .and(AzureRepositoryLock.TIME_TO_WAIT_BEFORE_WRITE_BLOCK_PROP, "9");
+    public final ProvideSystemProperty systemPropertyRule = new ProvideSystemProperty(AzureRepositoryLockV8.LEASE_DURATION_PROP, "15")
+            .and(AzureRepositoryLockV8.RENEWAL_INTERVAL_PROP, "3")
+            .and(AzureRepositoryLockV8.TIME_TO_WAIT_BEFORE_WRITE_BLOCK_PROP, "9");
 
     @Test
     public void testRecovery() throws StorageException, URISyntaxException, IOException {
-        SegmentArchiveManager manager = azurePersistence.createArchiveManager(false, false, new IOMonitorAdapter(), new FileStoreMonitorAdapter(), new RemoteStoreMonitorAdapter());
+        SegmentArchiveManager manager = azurePersistenceV8.createArchiveManager(false, false, new IOMonitorAdapter(), new FileStoreMonitorAdapter(), new RemoteStoreMonitorAdapter());
         SegmentArchiveWriter writer = manager.create("data00000a.tar");
 
         List<UUID> uuids = new ArrayList<>();
@@ -133,7 +137,7 @@ public class AzureArchiveManagerTest {
 
     @Test
     public void testBackupWithRecoveredEntries() throws StorageException, URISyntaxException, IOException {
-        SegmentArchiveManager manager = azurePersistence.createArchiveManager(false, false, new IOMonitorAdapter(), new FileStoreMonitorAdapter(), new RemoteStoreMonitorAdapter());
+        SegmentArchiveManager manager = azurePersistenceV8.createArchiveManager(false, false, new IOMonitorAdapter(), new FileStoreMonitorAdapter(), new RemoteStoreMonitorAdapter());
         SegmentArchiveWriter writer = manager.create("data00000a.tar");
 
         List<UUID> uuids = new ArrayList<>();
@@ -164,7 +168,7 @@ public class AzureArchiveManagerTest {
 
     @Test
     public void testUncleanStop() throws URISyntaxException, IOException, InvalidFileStoreVersionException, CommitFailedException, StorageException {
-        AzurePersistence p = new AzurePersistence(container.getDirectoryReference("oak"));
+        AzurePersistenceV8 p = new AzurePersistenceV8(container.getDirectoryReference("oak"));
         FileStore fs = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(p).build();
         SegmentNodeStore segmentNodeStore = SegmentNodeStoreBuilders.builder(fs).build();
         NodeBuilder builder = segmentNodeStore.getRoot().builder();
@@ -185,7 +189,7 @@ public class AzureArchiveManagerTest {
     @Test
     // see OAK-8566
     public void testUncleanStopWithEmptyArchive() throws URISyntaxException, IOException, InvalidFileStoreVersionException, CommitFailedException, StorageException {
-        AzurePersistence p = new AzurePersistence(container.getDirectoryReference("oak"));
+        AzurePersistenceV8 p = new AzurePersistenceV8(container.getDirectoryReference("oak"));
         FileStore fs = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(p).build();
         SegmentNodeStore segmentNodeStore = SegmentNodeStoreBuilders.builder(fs).build();
         NodeBuilder builder = segmentNodeStore.getRoot().builder();
@@ -214,7 +218,7 @@ public class AzureArchiveManagerTest {
 
     @Test
     public void testUncleanStopSegmentMissing() throws URISyntaxException, IOException, InvalidFileStoreVersionException, CommitFailedException, StorageException {
-        AzurePersistence p = new AzurePersistence(container.getDirectoryReference("oak"));
+        AzurePersistenceV8 p = new AzurePersistenceV8(container.getDirectoryReference("oak"));
         FileStore fs = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(p).build();
         SegmentNodeStore segmentNodeStore = SegmentNodeStoreBuilders.builder(fs).build();
         NodeBuilder builder = segmentNodeStore.getRoot().builder();
@@ -272,7 +276,7 @@ public class AzureArchiveManagerTest {
 
     @Test
     public void testExists() throws IOException, URISyntaxException {
-        SegmentArchiveManager manager = azurePersistence.createArchiveManager(false, false, new IOMonitorAdapter(), new FileStoreMonitorAdapter(), new RemoteStoreMonitorAdapter());
+        SegmentArchiveManager manager = azurePersistenceV8.createArchiveManager(false, false, new IOMonitorAdapter(), new FileStoreMonitorAdapter(), new RemoteStoreMonitorAdapter());
         SegmentArchiveWriter writer = manager.create("data00000a.tar");
 
         List<UUID> uuids = new ArrayList<>();
@@ -291,7 +295,7 @@ public class AzureArchiveManagerTest {
 
     @Test
     public void testArchiveExistsAfterFlush() throws URISyntaxException, IOException {
-        SegmentArchiveManager manager = azurePersistence.createArchiveManager(false, false, new IOMonitorAdapter(), new FileStoreMonitorAdapter(), new RemoteStoreMonitorAdapter());
+        SegmentArchiveManager manager = azurePersistenceV8.createArchiveManager(false, false, new IOMonitorAdapter(), new FileStoreMonitorAdapter(), new RemoteStoreMonitorAdapter());
         SegmentArchiveWriter writer = manager.create("data00000a.tar");
 
         Assert.assertFalse(manager.exists("data00000a.tar"));
@@ -303,7 +307,7 @@ public class AzureArchiveManagerTest {
 
     @Test(expected = FileNotFoundException.class)
     public void testSegmentDeletedAfterCreatingReader() throws IOException, URISyntaxException, StorageException {
-        SegmentArchiveManager manager = azurePersistence.createArchiveManager(false, false, new IOMonitorAdapter(), new FileStoreMonitorAdapter(), new RemoteStoreMonitorAdapter());
+        SegmentArchiveManager manager = azurePersistenceV8.createArchiveManager(false, false, new IOMonitorAdapter(), new FileStoreMonitorAdapter(), new RemoteStoreMonitorAdapter());
         SegmentArchiveWriter writer = manager.create("data00000a.tar");
 
         Assert.assertFalse(manager.exists("data00000a.tar"));
@@ -331,10 +335,10 @@ public class AzureArchiveManagerTest {
     @Test(expected = SegmentNotFoundException.class)
     public void testMissngSegmentDetectedInFileStore() throws IOException, StorageException, URISyntaxException, InvalidFileStoreVersionException {
 
-        AzurePersistence azurePersistence = new AzurePersistence(container.getDirectoryReference("oak"));
-        FileStore fileStore = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(azurePersistence).build();
+        AzurePersistenceV8 azurePersistenceV8 = new AzurePersistenceV8(container.getDirectoryReference("oak"));
+        FileStore fileStore = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(azurePersistenceV8).build();
 
-        SegmentArchiveManager manager = azurePersistence.createArchiveManager(false, false, new IOMonitorAdapter(), new FileStoreMonitorAdapter(), new RemoteStoreMonitorAdapter());
+        SegmentArchiveManager manager = azurePersistenceV8.createArchiveManager(false, false, new IOMonitorAdapter(), new FileStoreMonitorAdapter(), new RemoteStoreMonitorAdapter());
         SegmentArchiveWriter writer = manager.create("data00000a.tar");
 
         //Assert.assertFalse(manager.exists("data00000a.tar"));
@@ -356,7 +360,7 @@ public class AzureArchiveManagerTest {
 
     @Test
     public void testReadOnlyRecovery() throws URISyntaxException, InvalidFileStoreVersionException, IOException, CommitFailedException, StorageException {
-        AzurePersistence rwPersistence = new AzurePersistence(container.getDirectoryReference("oak"));
+        AzurePersistenceV8 rwPersistence = new AzurePersistenceV8(container.getDirectoryReference("oak"));
         FileStore rwFileStore = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(rwPersistence).build();
         SegmentNodeStore segmentNodeStore = SegmentNodeStoreBuilders.builder(rwFileStore).build();
         NodeBuilder builder = segmentNodeStore.getRoot().builder();
@@ -368,7 +372,7 @@ public class AzureArchiveManagerTest {
         assertFalse(container.getDirectoryReference("oak/data00000a.tar.ro.bak").listBlobs().iterator().hasNext());
 
         // create read-only FS
-        AzurePersistence roPersistence = new AzurePersistence(container.getDirectoryReference("oak"));
+        AzurePersistenceV8 roPersistence = new AzurePersistenceV8(container.getDirectoryReference("oak"));
         ReadOnlyFileStore roFileStore = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(roPersistence).buildReadOnly();
 
         PropertyState fooProperty = SegmentNodeStoreBuilders.builder(roFileStore).build()
@@ -387,7 +391,7 @@ public class AzureArchiveManagerTest {
 
     @Test
     public void testCachingPersistenceTarRecovery() throws URISyntaxException, InvalidFileStoreVersionException, IOException, CommitFailedException, StorageException {
-        AzurePersistence rwPersistence = new AzurePersistence(container.getDirectoryReference("oak"));
+        AzurePersistenceV8 rwPersistence = new AzurePersistenceV8(container.getDirectoryReference("oak"));
         FileStore rwFileStore = FileStoreBuilder.fileStoreBuilder(folder.newFolder()).withCustomPersistence(rwPersistence).build();
         SegmentNodeStore segmentNodeStore = SegmentNodeStoreBuilders.builder(rwFileStore).build();
         NodeBuilder builder = segmentNodeStore.getRoot().builder();
@@ -399,7 +403,7 @@ public class AzureArchiveManagerTest {
         assertFalse(container.getDirectoryReference("oak/data00000a.tar.ro.bak").listBlobs().iterator().hasNext());
 
         // create files store with split persistence
-        AzurePersistence azureSharedPersistence = new AzurePersistence(container.getDirectoryReference("oak"));
+        AzurePersistenceV8 azureSharedPersistence = new AzurePersistenceV8(container.getDirectoryReference("oak"));
 
         CachingPersistence cachingPersistence = new CachingPersistence(createPersistenceCache(), azureSharedPersistence);
         File localFolder = folder.newFolder();
@@ -416,7 +420,7 @@ public class AzureArchiveManagerTest {
 
     @Test
     public void testCollectBlobReferencesForReadOnlyFileStore() throws URISyntaxException, InvalidFileStoreVersionException, IOException, CommitFailedException, StorageException {
-        AzurePersistence rwPersistence = new AzurePersistence(container.getDirectoryReference("oak"));
+        AzurePersistenceV8 rwPersistence = new AzurePersistenceV8(container.getDirectoryReference("oak"));
         try (FileStore rwFileStore = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(rwPersistence).build()) {
             SegmentNodeStore segmentNodeStore = SegmentNodeStoreBuilders.builder(rwFileStore).build();
             NodeBuilder builder = segmentNodeStore.getRoot().builder();
@@ -428,7 +432,7 @@ public class AzureArchiveManagerTest {
             assertFalse("brf file should not be present", container.getDirectoryReference("oak/data00000a.tar").getBlockBlobReference("data00000a.tar.brf").exists());
 
             // create read-only FS, while the rw FS is still open
-            AzurePersistence roPersistence = new AzurePersistence(container.getDirectoryReference("oak"));
+            AzurePersistenceV8 roPersistence = new AzurePersistenceV8(container.getDirectoryReference("oak"));
             try (ReadOnlyFileStore roFileStore = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(roPersistence).buildReadOnly()) {
 
                 PropertyState fooProperty = SegmentNodeStoreBuilders.builder(roFileStore).build()
@@ -446,7 +450,7 @@ public class AzureArchiveManagerTest {
 
     @Test
     public void testCollectBlobReferencesDoesNotFailWhenFileIsMissing() throws URISyntaxException, InvalidFileStoreVersionException, IOException, CommitFailedException, StorageException {
-        AzurePersistence rwPersistence = new AzurePersistence(container.getDirectoryReference("oak"));
+        AzurePersistenceV8 rwPersistence = new AzurePersistenceV8(container.getDirectoryReference("oak"));
         try (FileStore rwFileStore = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(rwPersistence).build()) {
             SegmentNodeStore segmentNodeStore = SegmentNodeStoreBuilders.builder(rwFileStore).build();
             NodeBuilder builder = segmentNodeStore.getRoot().builder();
@@ -458,7 +462,7 @@ public class AzureArchiveManagerTest {
             assertFalse("brf file should not be present", container.getDirectoryReference("oak/data00000a.tar").getBlockBlobReference("data00000a.tar.brf").exists());
 
             // create read-only FS, while the rw FS is still open
-            AzurePersistence roPersistence = new AzurePersistence(container.getDirectoryReference("oak"));
+            AzurePersistenceV8 roPersistence = new AzurePersistenceV8(container.getDirectoryReference("oak"));
             try (ReadOnlyFileStore roFileStore = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(roPersistence).buildReadOnly()) {
 
                 PropertyState fooProperty = SegmentNodeStoreBuilders.builder(roFileStore).build()
@@ -480,7 +484,7 @@ public class AzureArchiveManagerTest {
     @Test
     public void testWriteAfterLosingRepoLock() throws Exception {
         CloudBlobDirectory oakDirectory = container.getDirectoryReference("oak");
-        AzurePersistence rwPersistence = new AzurePersistence(oakDirectory);
+        AzurePersistenceV8 rwPersistence = new AzurePersistenceV8(oakDirectory);
 
         CloudBlockBlob blob = container.getBlockBlobReference("oak/repo.lock");
 
@@ -490,21 +494,21 @@ public class AzureArchiveManagerTest {
                 .doCallRealMethod()
                 .when(blobMocked).renewLease(Mockito.any(), Mockito.any(), Mockito.any());
 
-        AzurePersistence mockedRwPersistence = Mockito.spy(rwPersistence);
+        AzurePersistenceV8 mockedRwPersistence = Mockito.spy(rwPersistence);
         WriteAccessController writeAccessController = new WriteAccessController();
-        AzureRepositoryLock azureRepositoryLock = new AzureRepositoryLock(blobMocked, () -> {}, writeAccessController);
-        AzureArchiveManager azureArchiveManager = new AzureArchiveManager(oakDirectory, new IOMonitorAdapter(), new FileStoreMonitorAdapter(), writeAccessController);
+        AzureRepositoryLockV8 azureRepositoryLockV8 = new AzureRepositoryLockV8(blobMocked, () -> {}, writeAccessController);
+        AzureArchiveManagerV8 azureArchiveManagerV8 = new AzureArchiveManagerV8(oakDirectory, new IOMonitorAdapter(), new FileStoreMonitorAdapter(), writeAccessController);
 
 
         Mockito
-                .doAnswer(invocation -> azureRepositoryLock.lock())
+                .doAnswer(invocation -> azureRepositoryLockV8.lock())
                 .when(mockedRwPersistence).lockRepository();
 
         Mockito
-                .doReturn(azureArchiveManager)
+                .doReturn(azureArchiveManagerV8)
                 .when(mockedRwPersistence).createArchiveManager(Mockito.anyBoolean(), Mockito.anyBoolean(), Mockito.any(), Mockito.any(), Mockito.any());
         Mockito
-                .doReturn(new AzureJournalFile(oakDirectory, "journal.log", writeAccessController))
+                .doReturn(new AzureJournalFileV8(oakDirectory, "journal.log", writeAccessController))
                 .when(mockedRwPersistence).getJournalFile();
 
         FileStore rwFileStore = FileStoreBuilder.fileStoreBuilder(folder.newFolder()).withCustomPersistence(mockedRwPersistence).build();
@@ -539,7 +543,7 @@ public class AzureArchiveManagerTest {
         Thread.sleep(2000);
 
         // It should be possible to start another RW file store.
-        FileStore rwFileStore2 = FileStoreBuilder.fileStoreBuilder(folder.newFolder()).withCustomPersistence(new AzurePersistence(oakDirectory)).build();
+        FileStore rwFileStore2 = FileStoreBuilder.fileStoreBuilder(folder.newFolder()).withCustomPersistence(new AzurePersistenceV8(oakDirectory)).build();
         SegmentNodeStore segmentNodeStore2 = SegmentNodeStoreBuilders.builder(rwFileStore2).build();
         NodeBuilder builder2 = segmentNodeStore2.getRoot().builder();
 

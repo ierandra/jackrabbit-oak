@@ -38,9 +38,9 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.jackrabbit.oak.commons.Buffer;
-import org.apache.jackrabbit.oak.segment.azure.AzurePersistence;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
 import org.apache.jackrabbit.oak.segment.azure.AzureStorageCredentialManager;
-import org.apache.jackrabbit.oak.segment.azure.AzureUtilities;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzureUtilitiesV8;
 import org.apache.jackrabbit.oak.segment.azure.util.Environment;
 import org.apache.jackrabbit.oak.segment.compaction.SegmentGCOptions.CompactorType;
 import org.apache.jackrabbit.oak.segment.file.*;
@@ -64,7 +64,6 @@ import com.microsoft.azure.storage.StorageCredentialsSharedAccessSignature;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.blob.CloudBlobDirectory;
 import org.apache.jackrabbit.oak.stats.StatisticsProvider;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -138,7 +137,7 @@ public class ToolUtils {
             case AZURE:
                 Objects.requireNonNull(azureStorageCredentialManager, "azure storage credentials manager instance cannot be null");
                 CloudBlobDirectory cloudBlobDirectory = createCloudBlobDirectory(pathOrUri.substring(3), azureStorageCredentialManager);
-                persistence = new AzurePersistence(cloudBlobDirectory);
+                persistence = new AzurePersistenceV8(cloudBlobDirectory);
                 break;
             default:
                 persistence = new TarPersistence(new File(pathOrUri));
@@ -182,7 +181,7 @@ public class ToolUtils {
         String dir = config.get(KEY_DIR);
 
         try {
-            return AzureUtilities.cloudBlobDirectoryFrom(credentials, uri, dir);
+            return AzureUtilitiesV8.cloudBlobDirectoryFrom(credentials, uri, dir);
         } catch (URISyntaxException | StorageException e) {
             throw new IllegalArgumentException(
                     "Could not connect to the Azure Storage. Please verify the path provided!");

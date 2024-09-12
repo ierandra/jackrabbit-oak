@@ -36,7 +36,7 @@ import com.microsoft.azure.storage.blob.CloudBlobDirectory;
 import com.microsoft.azure.storage.blob.ListBlobItem;
 
 import org.apache.jackrabbit.oak.segment.SegmentCache;
-import org.apache.jackrabbit.oak.segment.azure.AzurePersistence;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
 import org.apache.jackrabbit.oak.segment.azure.AzureStorageCredentialManager;
 import org.apache.jackrabbit.oak.segment.azure.tool.ToolUtils.SegmentStoreType;
 import org.apache.jackrabbit.oak.segment.compaction.SegmentGCOptions.GCType;
@@ -333,8 +333,8 @@ public class AzureCompact {
         SegmentNodeStorePersistence roPersistence;
         SegmentNodeStorePersistence rwPersistence;
         if (sourceCloudBlobDirectory != null && destinationCloudBlobDirectory != null) {
-            roPersistence = new AzurePersistence(sourceCloudBlobDirectory);
-            rwPersistence = new AzurePersistence(destinationCloudBlobDirectory);
+            roPersistence = new AzurePersistenceV8(sourceCloudBlobDirectory);
+            rwPersistence = new AzurePersistenceV8(destinationCloudBlobDirectory);
         } else {
             roPersistence = newSegmentNodeStorePersistence(SegmentStoreType.AZURE, path, azureStorageCredentialManager);
             rwPersistence = newSegmentNodeStorePersistence(SegmentStoreType.AZURE, targetPath, azureStorageCredentialManager);

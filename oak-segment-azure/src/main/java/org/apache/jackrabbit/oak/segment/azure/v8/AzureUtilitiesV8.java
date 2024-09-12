@@ -14,14 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.jackrabbit.oak.segment.azure;
+package org.apache.jackrabbit.oak.segment.azure.v8;
 
-import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.models.BlobItem;
-import com.azure.storage.blob.models.BlobStorageException;
-import com.azure.storage.blob.models.ListBlobsOptions;
-import com.azure.storage.blob.specialized.AppendBlobClient;
-import com.azure.storage.blob.specialized.BlockBlobClient;
+import com.microsoft.azure.storage.CloudStorageAccount;
+import com.microsoft.azure.storage.ResultContinuation;
+import com.microsoft.azure.storage.ResultSegment;
+import com.microsoft.azure.storage.StorageCredentials;
+import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.StorageUri;
+import com.microsoft.azure.storage.blob.BlobListingDetails;
+import com.microsoft.azure.storage.blob.CloudBlob;
+import com.microsoft.azure.storage.blob.CloudBlobContainer;
+import com.microsoft.azure.storage.blob.CloudBlobDirectory;
+import com.microsoft.azure.storage.blob.LeaseStatus;
+import com.microsoft.azure.storage.blob.ListBlobItem;
 import org.apache.jackrabbit.oak.commons.Buffer;
 import org.apache.jackrabbit.oak.segment.spi.RepositoryNotReachableException;
 import org.jetbrains.annotations.NotNull;
@@ -38,9 +44,8 @@ import java.security.InvalidKeyException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.stream.Collectors;
 
-public final class AzureUtilities {
+public final class AzureUtilitiesV8 {
 
     public static final String AZURE_ACCOUNT_NAME = "AZURE_ACCOUNT_NAME";
     public static final String AZURE_SECRET_KEY = "AZURE_SECRET_KEY";
@@ -48,21 +53,21 @@ public final class AzureUtilities {
     public static final String AZURE_CLIENT_ID = "AZURE_CLIENT_ID";
     public static final String AZURE_CLIENT_SECRET = "AZURE_CLIENT_SECRET";
 
-    private static final Logger log = LoggerFactory.getLogger(AzureUtilities.class);
+    private static final Logger log = LoggerFactory.getLogger(AzureUtilitiesV8.class);
 
-    private AzureUtilities() {
+    private AzureUtilitiesV8() {
     }
 
-    public static String getName(BlobItem blob) {
+    public static String getName(CloudBlob blob) {
         return Paths.get(blob.getName()).getFileName().toString();
     }
 
-    public static String getName(AppendBlobClient blob) {
-        return Paths.get(blob.getBlobName()).getFileName().toString();
+    public static String getName(CloudBlobDirectory directory) {
+        return Paths.get(directory.getUri().getPath()).getFileName().toString();
     }
 
-    public static List<BlobItem> getBlobs(BlobContainerClient blobContainerClient) throws IOException {
-        List<BlobItem> blobList = new ArrayList<>();
+    public static List<CloudBlob> getBlobs(CloudBlobDirectory directory) throws IOException {
+        List<CloudBlob> blobList = new ArrayList<>();
         ResultContinuation token = null;
         do {
             ResultSegment<ListBlobItem> result = listBlobsInSegments(directory, token); //get the blobs in pages of 5000
@@ -77,18 +82,14 @@ public final class AzureUtilities {
         return blobList;
     }
 
-    public static List<BlobItem> getBlobs(BlobContainerClient blobContainerClient, ListBlobsOptions listOptions) {
-        return blobContainerClient.listBlobs(listOptions, null).stream().collect(Collectors.toList());
-    }
-
-    public static void readBufferFully(BlockBlobClient blob, Buffer buffer) throws IOException {
+    public static void readBufferFully(CloudBlob blob, Buffer buffer) throws IOException {
         try {
-            blob.downloadStream(new ByteBufferOutputStream(buffer));
+            blob.download(new ByteBufferOutputStream(buffer));
             buffer.flip();
-        } catch (BlobStorageException e) {
-            if (e.getStatusCode() == 404) {
-                log.error("Blob not found in the remote repository: {}", blob.getBlobName());
-                throw new FileNotFoundException("Blob not found in the remote repository: " + blob.getBlobName());
+        } catch (StorageException e) {
+            if (e.getHttpStatusCode() == 404) {
+                log.error("Blob not found in the remote repository: {}", blob.getName());
+                throw new FileNotFoundException("Blob not found in the remote repository: " + blob.getName());
             }
             throw new RepositoryNotReachableException(e);
         }

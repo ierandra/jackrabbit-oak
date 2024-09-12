@@ -23,6 +23,7 @@ import com.microsoft.azure.storage.blob.ListBlobItem;
 import java.util.stream.IntStream;
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzuriteDockerRule;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzureJournalFileV8;
 import org.apache.jackrabbit.oak.segment.remote.WriteAccessController;
 import org.apache.jackrabbit.oak.segment.spi.persistence.JournalFileReader;
 import org.apache.jackrabbit.oak.segment.spi.persistence.JournalFileWriter;
@@ -43,21 +44,21 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class AzureJournalFileTest {
+public class AzureJournalFileV8Test {
 
     @ClassRule
     public static AzuriteDockerRule azurite = new AzuriteDockerRule();
 
     private CloudBlobContainer container;
 
-    private AzureJournalFile journal;
+    private AzureJournalFileV8 journal;
 
     @Before
     public void setup() throws StorageException, InvalidKeyException, URISyntaxException {
         container = azurite.getContainer("oak-test");
         WriteAccessController writeAccessController = new WriteAccessController();
         writeAccessController.enableWriting();
-        journal = new AzureJournalFile(container.getDirectoryReference("journal"), "journal.log", writeAccessController, 50);
+        journal = new AzureJournalFileV8(container.getDirectoryReference("journal"), "journal.log", writeAccessController, 50);
     }
 
     @Test

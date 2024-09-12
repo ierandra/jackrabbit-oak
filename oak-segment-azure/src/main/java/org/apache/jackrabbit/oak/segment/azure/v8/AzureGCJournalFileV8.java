@@ -14,34 +14,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.jackrabbit.oak.segment.azure;
+package org.apache.jackrabbit.oak.segment.azure.v8;
 
-import com.azure.storage.blob.models.BlobStorageException;
-import com.azure.storage.blob.specialized.AppendBlobClient;
+import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.blob.CloudAppendBlob;
 import org.apache.commons.io.IOUtils;
 import org.apache.jackrabbit.oak.segment.spi.persistence.GCJournalFile;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 
-public class AzureGCJournalFile implements GCJournalFile {
+public class AzureGCJournalFileV8 implements GCJournalFile {
 
-    private final AppendBlobClient gcJournal;
+    private final CloudAppendBlob gcJournal;
 
-    public AzureGCJournalFile(AppendBlobClient gcJournal) {
+    public AzureGCJournalFileV8(CloudAppendBlob gcJournal) {
         this.gcJournal = gcJournal;
     }
 
     @Override
     public void writeLine(String line) throws IOException {
         try {
-            gcJournal.createIfNotExists();
-            //TODO: ierandra
-            gcJournal.getBlobOutputStream().write((line + "\n").getBytes());
-        } catch (BlobStorageException e) {
+            if (!gcJournal.exists()) {
+                gcJournal.createOrReplace();
+            }
+            gcJournal.appendText(line + "\n", StandardCharsets.UTF_8.name(), null, null, null);
+        } catch (StorageException e) {
             throw new IOException(e);
         }
     }
@@ -52,9 +54,10 @@ public class AzureGCJournalFile implements GCJournalFile {
             if (!gcJournal.exists()) {
                 return Collections.emptyList();
             }
-            byte[] data = gcJournal.downloadContent().toBytes();
+            byte[] data = new byte[(int) gcJournal.getProperties().getLength()];
+            gcJournal.downloadToByteArray(data, 0);
             return IOUtils.readLines(new ByteArrayInputStream(data), Charset.defaultCharset());
-        } catch (BlobStorageException e) {
+        } catch (StorageException e) {
             throw new IOException(e);
         }
     }
@@ -62,8 +65,10 @@ public class AzureGCJournalFile implements GCJournalFile {
     @Override
     public void truncate() throws IOException {
         try {
-            gcJournal.deleteIfExists();
-        } catch (BlobStorageException e) {
+            if (gcJournal.exists()) {
+                gcJournal.delete();
+            }
+        } catch (StorageException e) {
             throw new IOException(e);
         }
     }

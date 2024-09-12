@@ -26,7 +26,7 @@ import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import com.microsoft.azure.storage.blob.CloudBlobDirectory;
 import org.apache.jackrabbit.oak.fixture.NodeStoreFixture;
 import org.apache.jackrabbit.oak.segment.SegmentNodeStoreBuilders;
-import org.apache.jackrabbit.oak.segment.azure.AzurePersistence;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
 import org.apache.jackrabbit.oak.segment.file.FileStore;
 import org.apache.jackrabbit.oak.segment.file.FileStoreBuilder;
 import org.apache.jackrabbit.oak.segment.file.InvalidFileStoreVersionException;
@@ -53,7 +53,7 @@ public class SegmentAzureFixture extends NodeStoreFixture {
 
     @Override
     public NodeStore createNodeStore() {
-        AzurePersistence persistence;
+        AzurePersistenceV8 persistence;
         CloudBlobContainer container;
         try {
             CloudStorageAccount cloud = CloudStorageAccount.parse(AZURE_CONNECTION_STRING);
@@ -67,7 +67,7 @@ public class SegmentAzureFixture extends NodeStoreFixture {
                 }
             }
             CloudBlobDirectory directory = container.getDirectoryReference(AZURE_ROOT_PATH);
-            persistence = new AzurePersistence(directory);
+            persistence = new AzurePersistenceV8(directory);
         } catch (StorageException | URISyntaxException | InvalidKeyException e) {
             throw new RuntimeException(e);
         }

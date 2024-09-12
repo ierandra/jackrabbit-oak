@@ -52,6 +52,9 @@
                             com.fasterxml.jackson.datatype*;resolution:=optional,
                             com.azure.identity.broker.implementation;resolution:=optional,
                             com.azure.xml;resolution:=optional,
+                            com.azure.storage.blob*;resolution:=optional,
+                            com.azure.storage.common*;resolution:=optional,
+                            com.azure.storage.internal*;resolution:=optional,
                             com.microsoft.aad.msal4jextensions*;resolution:=optional,
                             com.nimbusds.langtag;resolution:=optional,
                             com.sun.jna*;resolution:=optional,
@@ -75,7 +78,10 @@
                             com.microsoft.azure.storage.core,
                             com.microsoft.azure.storage.blob,
                             com.azure.core.credential,
-                            com.azure.identity
+                            com.azure.identity,
+                            com.azure.blob,
+                            com.azure.storage.common,
+                            com.azure.storage.internal.avro.implementation
                         </Export-Package>
                         <Embed-Dependency>
                             azure-storage,
@@ -83,6 +89,9 @@
                             azure-core,
                             azure-identity,
                             azure-json,
+                            azure-storage-blob,
+                            azure-storage-common,
+                            azure-storage-internal-avro,
                             guava,
                             jsr305,
                             reactive-streams,
@@ -186,6 +195,23 @@
         <dependency>
             <groupId>com.microsoft.azure</groupId>
             <artifactId>azure-keyvault-core</artifactId>
+        </dependency>
+
+        <!-- Azure Blob Storage v12 dependencies -->
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-storage-blob</artifactId>
+            <version>12.27.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-storage-common</artifactId>
+            <version>12.24.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-storage-internal-avro</artifactId>
+            <version>12.10.3</version>
         </dependency>
 
         <!-- Azure Identity Client for Microsoft Entra ID dependency -->

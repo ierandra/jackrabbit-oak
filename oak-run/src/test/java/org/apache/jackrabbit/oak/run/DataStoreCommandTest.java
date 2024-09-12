@@ -76,7 +76,7 @@ import org.apache.jackrabbit.oak.run.cli.BlobStoreOptions.Type;
 import org.apache.jackrabbit.oak.segment.SegmentNodeStore;
 import org.apache.jackrabbit.oak.segment.SegmentNodeStoreBuilders;
 import org.apache.jackrabbit.oak.segment.azure.AzureStorageCredentialManager;
-import org.apache.jackrabbit.oak.segment.azure.AzureUtilities;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzureUtilitiesV8;
 import org.apache.jackrabbit.oak.segment.azure.tool.ToolUtils;
 import org.apache.jackrabbit.oak.segment.compaction.SegmentGCOptions;
 import org.apache.jackrabbit.oak.segment.file.FileStore;
@@ -1151,7 +1151,7 @@ public class DataStoreCommandTest {
                 container = container + System.currentTimeMillis();
                 // Create the azure segment container
                 String connectionString = getAzureConnectionString(accessKey, secretKey, container, AZURE_DIR);
-                AzureUtilities.cloudBlobDirectoryFrom(connectionString, container, AZURE_DIR);
+                AzureUtilitiesV8.cloudBlobDirectoryFrom(connectionString, container, AZURE_DIR);
 
                 // get the azure uri expected by the command
                 storePath = getAzureUri(accessKey, container, AZURE_DIR);

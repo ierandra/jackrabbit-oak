@@ -14,32 +14,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.jackrabbit.oak.segment.azure;
+package org.apache.jackrabbit.oak.segment.azure.v8;
 
-import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.models.BlobItem;
-import com.azure.storage.blob.models.BlobRange;
-import com.azure.storage.blob.models.BlobRequestConditions;
-import com.azure.storage.blob.models.BlobStorageException;
+import com.microsoft.azure.storage.OperationContext;
+import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.blob.CloudBlob;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 import static java.lang.Math.min;
 
-public class ReverseFileReader {
+public class ReverseFileReaderV8 {
 
     private static final int BUFFER_SIZE = 16 * 1024;
 
     private int bufferSize;
 
-    private final BlobContainerClient blobContainerClient;
-
-    private final BlobItem blob;
+    private final CloudBlob blob;
 
     private byte[] buffer;
 
@@ -47,15 +43,14 @@ public class ReverseFileReader {
 
     private int fileOffset;
 
-    public ReverseFileReader(BlobContainerClient blobContainerClient, BlobItem blob) throws BlobStorageException {
-        this(blobContainerClient, blob, BUFFER_SIZE);
+    public ReverseFileReaderV8(CloudBlob blob) throws StorageException {
+        this (blob, BUFFER_SIZE);
     }
 
-    public ReverseFileReader(BlobContainerClient blobContainerClient, BlobItem blob, int bufferSize) throws BlobStorageException {
-        this.blobContainerClient = blobContainerClient;
+    public ReverseFileReaderV8(CloudBlob blob, int bufferSize) throws StorageException {
         this.blob = blob;
-        if (blobContainerClient.getBlobClient(blob.getName()).exists()) {
-            this.fileOffset = blob.getProperties().getContentLength().intValue();
+        if (blob.exists()) {
+            this.fileOffset = (int) blob.getProperties().getLength();
         } else {
             this.fileOffset = 0;
         }
@@ -72,11 +67,12 @@ public class ReverseFileReader {
         if (buffer.length > 0) {
             fileOffset -= buffer.length;
             try {
-                BlobRange blobRange = new BlobRange(Long.valueOf(fileOffset), Long.valueOf(buffer.length));
-                ByteArrayOutputStream outputStream = new ByteArrayOutputStream(buffer.length);
-                blobContainerClient.getBlobClient(blob.getName()).downloadStreamWithResponse(outputStream, blobRange, null, new BlobRequestConditions().setIfMatch("*"), false, null, null);
-                buffer = outputStream.toByteArray();
-            } catch (BlobStorageException e) {
+                OperationContext opContext = new OperationContext();
+                HashMap<String, String> userHeaders = new HashMap<>();
+                userHeaders.put("If-Match", "*");
+                opContext.setUserHeaders(userHeaders);
+                blob.downloadRangeToByteArray(fileOffset, Long.valueOf(buffer.length), buffer, 0, null, null, opContext);
+            } catch (StorageException e) {
                 throw new IOException(e);
             }
         }

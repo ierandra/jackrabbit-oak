@@ -16,8 +16,10 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.jackrabbit.oak.segment.azure;
+package org.apache.jackrabbit.oak.segment.azure.v8;
 
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobContainerClientBuilder;
 import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.LocationMode;
 import com.microsoft.azure.storage.StorageCredentials;
@@ -26,33 +28,25 @@ import com.microsoft.azure.storage.blob.BlobRequestOptions;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
-import org.apache.jackrabbit.oak.segment.azure.v8.AzureSegmentStoreServiceV8;
-import org.apache.jackrabbit.oak.segment.spi.persistence.SegmentNodeStorePersistence;
+import org.apache.jackrabbit.oak.segment.azure.AzureStorageCredentialManager;
+import org.apache.jackrabbit.oak.segment.azure.Configuration;
 import org.jetbrains.annotations.NotNull;
 import org.osgi.framework.ServiceRegistration;
-import org.osgi.service.component.ComponentContext;
-import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
-import org.osgi.service.component.annotations.Deactivate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.InvalidKeyException;
-import java.util.Hashtable;
-import java.util.Objects;
-
-import static org.osgi.framework.Constants.SERVICE_PID;
 
 @Component(
-        configurationPolicy = ConfigurationPolicy.REQUIRE,
-        configurationPid = {Configuration.PID})
-public class AzureSegmentStoreService {
+    configurationPolicy = ConfigurationPolicy.REQUIRE,
+    configurationPid = {Configuration.PID})
+public class AzureSegmentStoreServiceV8 {
 
-    private static final Logger log = LoggerFactory.getLogger(AzureSegmentStoreService.class);
+    private static final Logger log = LoggerFactory.getLogger(AzureSegmentStoreServiceV8.class);
 
     public static final String DEFAULT_CONTAINER_NAME = "oak";
 
@@ -64,46 +58,7 @@ public class AzureSegmentStoreService {
     private ServiceRegistration registration;
     private static AzureStorageCredentialManager azureStorageCredentialManager;
 
-    private final boolean useAzureSdkV12 = Boolean.getBoolean("segment.azure.v12.enabled");
-
-
-    @Activate
-    public void activate(ComponentContext context, Configuration config) throws IOException {
-        if (useAzureSdkV12) {
-            log.info("Starting nodestore using Azure SDK 12");
-            AzurePersistenceV8 persistence = AzureSegmentStoreServiceV8.createAzurePersistenceFrom(config);
-            registration = context.getBundleContext()
-                    .registerService(SegmentNodeStorePersistence.class, persistence, new Hashtable<String, Object>() {{
-                        put(SERVICE_PID, String.format("%s(%s, %s)", AzurePersistenceV8.class.getName(), config.accountName(), config.rootPath()));
-                        if (!Objects.equals(config.role(), "")) {
-                            put("role", config.role());
-                        }
-                    }});
-        } else {
-            log.info("Starting nodestore using Azure SDK 8");
-            AzurePersistenceV8 persistence = AzureSegmentStoreServiceV8.createAzurePersistenceFrom(config);
-            registration = context.getBundleContext()
-                    .registerService(SegmentNodeStorePersistence.class, persistence, new Hashtable<String, Object>() {{
-                        put(SERVICE_PID, String.format("%s(%s, %s)", AzurePersistenceV8.class.getName(), config.accountName(), config.rootPath()));
-                        if (!Objects.equals(config.role(), "")) {
-                            put("role", config.role());
-                        }
-                    }});
-        }
-    }
-
-    @Deactivate
-    public void deactivate() throws IOException {
-        if (registration != null) {
-            registration.unregister();
-            registration = null;
-        }
-        if (azureStorageCredentialManager != null) {
-            azureStorageCredentialManager.close();
-        }
-    }
-
-    private static AzurePersistenceV8 createAzurePersistenceFrom(Configuration configuration) throws IOException {
+    public static AzurePersistenceV8 createAzurePersistenceFrom(Configuration configuration) throws IOException {
         if (!StringUtils.isBlank(configuration.connectionURL())) {
             return createPersistenceFromConnectionURL(configuration);
         }
@@ -124,6 +79,11 @@ public class AzureSegmentStoreService {
         if (!StringUtils.isBlank(configuration.blobEndpoint())) {
             connectionString.append("BlobEndpoint=").append(configuration.blobEndpoint()).append(';');
         }
+
+        BlobContainerClient blobContainerClient = new BlobContainerClientBuilder()
+                .containerName(configuration.containerName())
+                .connectionString(connectionString.toString()).buildClient();
+
         return createAzurePersistence(connectionString.toString(), configuration, true);
     }
 
