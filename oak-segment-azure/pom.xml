@@ -48,10 +48,9 @@
                             org.apache.jackrabbit.oak.segment.remote*,
                             com.fasterxml.jackson.annotation;resolution:=optional,
                             com.fasterxml.jackson.databind*;resolution:=optional,
-                            com.fasterxml.jackson.dataformat.xml;resolution:=optional,
+                            com.fasterxml.jackson.dataformat.*;resolution:=optional,
                             com.fasterxml.jackson.datatype*;resolution:=optional,
                             com.azure.identity.broker.implementation;resolution:=optional,
-                            com.azure.xml;resolution:=optional,
                             com.azure.storage.blob*;resolution:=optional,
                             com.azure.storage.common*;resolution:=optional,
                             com.azure.storage.internal*;resolution:=optional,
@@ -74,6 +73,8 @@
                             org.apache.jackrabbit.oak.segment.azure,
                             org.apache.jackrabbit.oak.segment.azure.queue,
                             org.apache.jackrabbit.oak.segment.azure.util,
+                            com.fasterxml.jackson.dataformat.xml,
+                            com.fasterxml.jackson.dataformat.xml.deser,
                             com.microsoft.azure.storage,
                             com.microsoft.azure.storage.core,
                             com.microsoft.azure.storage.blob,
@@ -89,9 +90,11 @@
                             azure-core,
                             azure-identity,
                             azure-json,
+                            azure-xml,
                             azure-storage-blob,
                             azure-storage-common,
                             azure-storage-internal-avro,
+                            jackson-dataformat-xml,
                             guava,
                             jsr305,
                             reactive-streams,
@@ -201,7 +204,7 @@
         <dependency>
             <groupId>com.azure</groupId>
             <artifactId>azure-storage-blob</artifactId>
-            <version>12.27.0</version>
+            <version>12.25.3</version>
         </dependency>
         <dependency>
             <groupId>com.azure</groupId>
@@ -212,6 +215,11 @@
             <groupId>com.azure</groupId>
             <artifactId>azure-storage-internal-avro</artifactId>
             <version>12.10.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-xml</artifactId>
+            <version>1.0.0</version>
         </dependency>
 
         <!-- Azure Identity Client for Microsoft Entra ID dependency -->

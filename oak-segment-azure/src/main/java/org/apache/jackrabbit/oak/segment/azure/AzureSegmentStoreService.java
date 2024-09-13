@@ -19,7 +19,8 @@
 package org.apache.jackrabbit.oak.segment.azure;
 
 import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.BlobContainerClientBuilder;
+import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.BlobStorageException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
@@ -148,10 +149,16 @@ public class AzureSegmentStoreService {
     @NotNull
     private static AzurePersistence createAzurePersistence(String connectionString, Configuration configuration, boolean createContainer) throws IOException {
         try {
-            BlobContainerClient blobContainerClient = new BlobContainerClientBuilder()
+            String containerName = configuration.containerName();
+            String endpoint = String.format("https://%s.blob.core.windows.net", containerName);
+
+            BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
+                    .endpoint(endpoint)
                     .connectionString(connectionString)
-                    .containerName(configuration.containerName())
                     .buildClient();
+
+
+            BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
 
             return createAzurePersistence(blobContainerClient, configuration, createContainer);
         } catch (BlobStorageException e) {

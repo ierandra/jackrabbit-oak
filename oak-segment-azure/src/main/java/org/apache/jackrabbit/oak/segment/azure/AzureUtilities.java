@@ -61,21 +61,7 @@ public final class AzureUtilities {
         return Paths.get(blob.getBlobName()).getFileName().toString();
     }
 
-    public static List<BlobItem> getBlobs(BlobContainerClient blobContainerClient) throws IOException {
-        List<BlobItem> blobList = new ArrayList<>();
-        ResultContinuation token = null;
-        do {
-            ResultSegment<ListBlobItem> result = listBlobsInSegments(directory, token); //get the blobs in pages of 5000
-            for (ListBlobItem b : result.getResults()) {                                //add resultant blobs to list
-                if (b instanceof CloudBlob) {
-                    CloudBlob cloudBlob = (CloudBlob) b;
-                    blobList.add(cloudBlob);
-                }
-            }
-            token = result.getContinuationToken();
-        } while (token != null);
-        return blobList;
-    }
+
 
     public static List<BlobItem> getBlobs(BlobContainerClient blobContainerClient, ListBlobsOptions listOptions) {
         return blobContainerClient.listBlobs(listOptions, null).stream().collect(Collectors.toList());
@@ -91,82 +77,6 @@ public final class AzureUtilities {
                 throw new FileNotFoundException("Blob not found in the remote repository: " + blob.getBlobName());
             }
             throw new RepositoryNotReachableException(e);
-        }
-    }
-
-    public static void deleteAllEntries(CloudBlobDirectory directory) throws IOException {
-        getBlobs(directory).forEach(b -> {
-            try {
-                b.deleteIfExists();
-            } catch (StorageException e) {
-                log.error("Can't delete blob {}", b.getUri().getPath(), e);
-            }
-        });
-    }
-
-    public static CloudBlobDirectory cloudBlobDirectoryFrom(StorageCredentials credentials,
-                                                            String uri, String dir) throws URISyntaxException, StorageException {
-        StorageUri storageUri = new StorageUri(new URI(uri));
-        CloudBlobContainer container = new CloudBlobContainer(storageUri, credentials);
-
-        container.createIfNotExists();
-
-        return container.getDirectoryReference(dir);
-    }
-
-    public static CloudBlobDirectory cloudBlobDirectoryFrom(String connection, String containerName,
-                                                            String dir) throws InvalidKeyException, URISyntaxException, StorageException {
-        CloudStorageAccount cloud = CloudStorageAccount.parse(connection);
-        CloudBlobContainer container = cloud.createCloudBlobClient().getContainerReference(containerName);
-        container.createIfNotExists();
-
-        return container.getDirectoryReference(dir);
-    }
-
-    private static ResultSegment<ListBlobItem> listBlobsInSegments(CloudBlobDirectory directory,
-                                                                   ResultContinuation token) throws IOException {
-        ResultSegment<ListBlobItem> result = null;
-        IOException lastException = null;
-        for (int sleep = 10; sleep <= 10000; sleep *= 10) {  //increment the sleep time in steps.
-            try {
-                result = directory.listBlobsSegmented(
-                        null,
-                        false,
-                        EnumSet.of(BlobListingDetails.METADATA),
-                        5000,
-                        token,
-                        null,
-                        null);
-                break;  //we have the results, no need to retry
-            } catch (StorageException | URISyntaxException e) {
-                lastException = new IOException(e);
-                try {
-                    Thread.sleep(sleep); //Sleep and retry
-                } catch (InterruptedException ex) {
-                    log.warn("Interrupted", e);
-                }
-            }
-        }
-
-        if (result == null) {
-            throw lastException;
-        } else {
-            return result;
-        }
-    }
-
-    public static void deleteAllBlobs(@NotNull CloudBlobDirectory directory) throws URISyntaxException, StorageException, InterruptedException {
-        for (ListBlobItem blobItem : directory.listBlobs()) {
-            if (blobItem instanceof CloudBlob) {
-                CloudBlob cloudBlob = (CloudBlob) blobItem;
-                if (cloudBlob.getProperties().getLeaseStatus() == LeaseStatus.LOCKED) {
-                    cloudBlob.breakLease(0);
-                }
-                cloudBlob.deleteIfExists();
-            } else if (blobItem instanceof CloudBlobDirectory) {
-                CloudBlobDirectory cloudBlobDirectory = (CloudBlobDirectory) blobItem;
-                deleteAllBlobs(cloudBlobDirectory);
-            }
         }
     }
 
