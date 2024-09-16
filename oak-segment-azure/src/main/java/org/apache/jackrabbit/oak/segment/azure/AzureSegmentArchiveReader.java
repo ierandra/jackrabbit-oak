@@ -30,6 +30,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.apache.jackrabbit.oak.segment.azure.AzureUtilities.readBufferFully;
 
@@ -95,7 +96,7 @@ public class AzureSegmentArchiveReader extends AbstractRemoteSegmentArchiveReade
 
     private BlockBlobClient getBlob(String name) throws IOException {
         try {
-            String fullName = String.format("%s/%s/", archivePath, name);
+            String fullName = String.format("%s/%s", archivePath, name);
             return blobContainerClient.getBlobClient(fullName).getBlockBlobClient();
         } catch (BlobStorageException e) {
             throw new IOException(e);

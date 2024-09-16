@@ -16,7 +16,7 @@
  */
 package org.apache.jackrabbit.oak.segment.azure;
 
-import com.azure.storage.blob.BlobContainerClient;
+import com.azure.core.util.BinaryData;
 import com.azure.storage.blob.models.BlobStorageException;
 import com.azure.storage.blob.specialized.BlockBlobClient;
 import org.apache.jackrabbit.oak.segment.spi.persistence.ManifestFile;
@@ -69,7 +69,7 @@ public class AzureManifestFile implements ManifestFile {
 
         byte[] data = bos.toByteArray();
         try {
-            manifestBlob.getBlobOutputStream().write(data, 0, data.length);
+            manifestBlob.upload(BinaryData.fromBytes(data), true);
         } catch (BlobStorageException e) {
             throw new IOException(e);
         }

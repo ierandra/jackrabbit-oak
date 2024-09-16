@@ -67,14 +67,14 @@ public class AzureRepositoryLock implements RepositoryLock {
 
     private volatile boolean doUpdate;
 
-    public AzureRepositoryLock(BlockBlobClient blockBlobClient, Runnable shutdownHook, WriteAccessController writeAccessController) {
-        this(blockBlobClient, shutdownHook, writeAccessController, TIMEOUT_SEC);
+    public AzureRepositoryLock(BlockBlobClient blockBlobClient, BlobLeaseClient leaseClient, Runnable shutdownHook, WriteAccessController writeAccessController) {
+        this(blockBlobClient, leaseClient, shutdownHook, writeAccessController, TIMEOUT_SEC);
     }
 
-    public AzureRepositoryLock(BlockBlobClient blockBlobClient, Runnable shutdownHook, WriteAccessController writeAccessController, int timeoutSec) {
+    public AzureRepositoryLock(BlockBlobClient blockBlobClient, BlobLeaseClient leaseClient, Runnable shutdownHook, WriteAccessController writeAccessController, int timeoutSec) {
         this.shutdownHook = shutdownHook;
         this.blockBlobClient = blockBlobClient;
-        this.leaseClient =  new BlobLeaseClientBuilder().blobClient(blockBlobClient).buildClient();
+        this.leaseClient =  leaseClient;
         this.executor = Executors.newSingleThreadExecutor();
         this.timeoutSec = timeoutSec;
         this.writeAccessController = writeAccessController;
@@ -197,4 +197,5 @@ public class AzureRepositoryLock implements RepositoryLock {
             throw new IOException(e);
         }
     }
+
 }

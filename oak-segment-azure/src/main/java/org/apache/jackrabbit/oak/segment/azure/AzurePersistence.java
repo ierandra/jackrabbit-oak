@@ -21,6 +21,8 @@ import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobStorageException;
 import com.azure.storage.blob.models.ListBlobsOptions;
 import com.azure.storage.blob.specialized.AppendBlobClient;
+import com.azure.storage.blob.specialized.BlobLeaseClient;
+import com.azure.storage.blob.specialized.BlobLeaseClientBuilder;
 import com.azure.storage.blob.specialized.BlockBlobClient;
 import org.apache.jackrabbit.oak.segment.remote.WriteAccessController;
 import org.apache.jackrabbit.oak.segment.spi.monitor.FileStoreMonitor;
@@ -86,7 +88,9 @@ public class AzurePersistence implements SegmentNodeStorePersistence {
 
     @Override
     public RepositoryLock lockRepository() throws IOException {
-        return new AzureRepositoryLock(getBlockBlob("repo.lock"), () -> {
+        BlockBlobClient blockBlobClient = getBlockBlob("repo.lock");
+        BlobLeaseClient blobLeaseClient = new BlobLeaseClientBuilder().blobClient(blockBlobClient).buildClient();
+        return new AzureRepositoryLock(blockBlobClient, blobLeaseClient, () -> {
             log.warn("Lost connection to the Azure. The client will be closed.");
             // TODO close the connection
         }, writeAccessController).lock();
@@ -133,6 +137,10 @@ public class AzurePersistence implements SegmentNodeStorePersistence {
             }
 
         });*/
+    }
+
+    public BlobContainerClient getBlobContainerClient() {
+        return blobContainerClient;
     }
 
     public void setWriteAccessController(WriteAccessController writeAccessController) {

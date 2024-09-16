@@ -14,35 +14,52 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.jackrabbit.oak.segment.azure;
+package org.apache.jackrabbit.oak.segment.azure.v8;
 
-import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.models.BlobItem;
-import com.azure.storage.blob.models.BlobStorageException;
-import com.azure.storage.blob.sas.BlobSasPermission;
-import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
 import org.apache.jackrabbit.guava.common.collect.ImmutableSet;
-import org.apache.jackrabbit.oak.segment.azure.util.Environment;
-import org.apache.jackrabbit.oak.segment.spi.persistence.SegmentNodeStorePersistence;
-import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
-import org.jetbrains.annotations.NotNull;
-import org.junit.*;
-import org.osgi.util.converter.Converters;
-
-import java.io.ByteArrayInputStream;
+import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.blob.*;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.OffsetDateTime;
+import java.util.Date;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.stream.StreamSupport;
 
+import org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzuriteDockerRule;
+import org.apache.jackrabbit.oak.segment.azure.AzureSegmentStoreService;
+import org.apache.jackrabbit.oak.segment.azure.Configuration;
+import org.apache.jackrabbit.oak.segment.azure.util.Environment;
+import org.apache.jackrabbit.oak.segment.spi.persistence.SegmentNodeStorePersistence;
+import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
+import org.jetbrains.annotations.NotNull;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Rule;
+import org.junit.Test;
+import org.osgi.util.converter.Converters;
+
+import static org.apache.jackrabbit.oak.segment.azure.v8.AzureUtilitiesV8.AZURE_ACCOUNT_NAME;
+import static org.apache.jackrabbit.oak.segment.azure.v8.AzureUtilitiesV8.AZURE_CLIENT_ID;
+import static org.apache.jackrabbit.oak.segment.azure.v8.AzureUtilitiesV8.AZURE_CLIENT_SECRET;
+import static org.apache.jackrabbit.oak.segment.azure.v8.AzureUtilitiesV8.AZURE_TENANT_ID;
+
+import static com.microsoft.azure.storage.blob.SharedAccessBlobPermissions.ADD;
+import static com.microsoft.azure.storage.blob.SharedAccessBlobPermissions.CREATE;
+import static com.microsoft.azure.storage.blob.SharedAccessBlobPermissions.LIST;
+import static com.microsoft.azure.storage.blob.SharedAccessBlobPermissions.READ;
+import static com.microsoft.azure.storage.blob.SharedAccessBlobPermissions.WRITE;
 import static java.util.stream.Collectors.toSet;
-import static org.apache.jackrabbit.oak.segment.azure.AzureUtilities.*;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeNotNull;
 
-public class AzureSegmentStoreServiceTest {
+public class AzureSegmentStoreServiceV8Test {
     private static final Environment ENVIRONMENT = new Environment();
 
     @ClassRule
@@ -51,39 +68,23 @@ public class AzureSegmentStoreServiceTest {
     @Rule
     public final OsgiContext context = new OsgiContext();
 
-    private static BlobSasPermission READ_ONLY;
-    private static BlobSasPermission READ_WRITE;
+    private static final EnumSet<SharedAccessBlobPermissions> READ_ONLY = EnumSet.of(READ, LIST);
+    private static final EnumSet<SharedAccessBlobPermissions> READ_WRITE = EnumSet.of(READ, LIST, CREATE, WRITE, ADD);
     private static final ImmutableSet<String> BLOBS = ImmutableSet.of("blob1", "blob2");
 
-    private BlobContainerClient container;
-
-    @BeforeClass
-    public static void setupTest(){
-        READ_ONLY = new BlobSasPermission();
-        READ_ONLY.setReadPermission(true);
-        READ_ONLY.setListPermission(true);
-
-        READ_WRITE = new BlobSasPermission();
-        READ_WRITE.setReadPermission(true);
-        READ_WRITE.setListPermission(true);
-        READ_WRITE.setCreatePermission(true);
-        READ_WRITE.setWritePermission(true);
-        READ_WRITE.setAddPermission(true);
-        System.setProperty("segment.azure.v12.enabled", "true");
-
-    }
-
+    private CloudBlobContainer container;
+    
     @Before
     public void setup() throws Exception {
         container = azurite.getContainer(AzureSegmentStoreService.DEFAULT_CONTAINER_NAME);
         for (String blob : BLOBS) {
-            container.getBlobClient(blob + ".txt").getBlockBlobClient().upload(new ByteArrayInputStream(blob.getBytes()), blob.length());
+            container.getBlockBlobReference(blob + ".txt").uploadText(blob);
         }
     }
 
     @Test
     public void connectWithSharedAccessSignatureURL_readOnly() throws Exception {
-        String sasToken = container.generateSas(policy(READ_ONLY), null);
+        String sasToken = container.generateSharedAccessSignature(policy(READ_ONLY), null);
 
         AzureSegmentStoreService azureSegmentStoreService = new AzureSegmentStoreService();
         azureSegmentStoreService.activate(context.componentContext(), getConfigurationWithSharedAccessSignature(sasToken));
@@ -96,7 +97,7 @@ public class AzureSegmentStoreServiceTest {
 
     @Test
     public void connectWithSharedAccessSignatureURL_readWrite() throws Exception {
-        String sasToken = container.generateSas(policy(READ_WRITE), null);
+        String sasToken = container.generateSharedAccessSignature(policy(READ_WRITE), null);
 
         AzureSegmentStoreService azureSegmentStoreService = new AzureSegmentStoreService();
         azureSegmentStoreService.activate(context.componentContext(), getConfigurationWithSharedAccessSignature(sasToken));
@@ -109,7 +110,8 @@ public class AzureSegmentStoreServiceTest {
 
     @Test
     public void connectWithSharedAccessSignatureURL_expired() throws Exception {
-        String sasToken = container.generateSas(policy(READ_WRITE, -1), null);
+        SharedAccessBlobPolicy expiredPolicy = policy(READ_WRITE, yesterday());
+        String sasToken = container.generateSharedAccessSignature(expiredPolicy, null);
 
         AzureSegmentStoreService azureSegmentStoreService = new AzureSegmentStoreService();
         azureSegmentStoreService.activate(context.componentContext(), getConfigurationWithSharedAccessSignature(sasToken));
@@ -176,45 +178,48 @@ public class AzureSegmentStoreServiceTest {
     }
 
     @NotNull
-    private static BlobServiceSasSignatureValues policy(BlobSasPermission permissions, long days) {
-        return new BlobServiceSasSignatureValues(OffsetDateTime.now().plusDays(days), permissions);
+    private static SharedAccessBlobPolicy policy(EnumSet<SharedAccessBlobPermissions> permissions, Instant expirationTime) {
+        SharedAccessBlobPolicy sharedAccessBlobPolicy = new SharedAccessBlobPolicy();
+        sharedAccessBlobPolicy.setPermissions(permissions);
+        sharedAccessBlobPolicy.setSharedAccessExpiryTime(Date.from(expirationTime));
+        return sharedAccessBlobPolicy;
     }
 
     @NotNull
-    private static BlobServiceSasSignatureValues policy(BlobSasPermission permissions) {
-        return policy(permissions, 7);
+    private static SharedAccessBlobPolicy policy(EnumSet<SharedAccessBlobPermissions> permissions) {
+        return policy(permissions, Instant.now().plus(Duration.ofDays(7)));
     }
 
     private static void assertReadAccessGranted(SegmentNodeStorePersistence persistence, Set<String> expectedBlobs) throws Exception {
-        BlobContainerClient container = getContainerFrom(persistence);
+        CloudBlobContainer container = getContainerFrom(persistence);
         Set<String> actualBlobNames = StreamSupport.stream(container.listBlobs().spliterator(), false)
-                .map(BlobItem::getName)
-                .map(path -> path.substring(path.lastIndexOf('/') + 1))
-                .filter(name -> name.equals("test.txt") || name.startsWith("blob"))
-                .collect(toSet());
+            .map(blob -> blob.getUri().getPath())
+            .map(path -> path.substring(path.lastIndexOf('/') + 1))
+            .filter(name -> name.equals("test.txt") || name.startsWith("blob"))
+            .collect(toSet());
         Set<String> expectedBlobNames = expectedBlobs.stream().map(name -> name + ".txt").collect(toSet());
 
         assertEquals(expectedBlobNames, actualBlobNames);
 
         Set<String> actualBlobContent = actualBlobNames.stream()
-                .map(name -> {
-                    try {
-                        return container.getBlobClient(name).downloadContent().toString();
-                    } catch (BlobStorageException e) {
-                        throw new RuntimeException("Error while reading blob " + name, e);
-                    }
-                })
-                .collect(toSet());
+            .map(name -> {
+                try {
+                    return container.getBlockBlobReference(name).downloadText();
+                } catch (StorageException | IOException | URISyntaxException e) {
+                    throw new RuntimeException("Error while reading blob " + name, e);
+                }
+            })
+            .collect(toSet());
         assertEquals(expectedBlobs, actualBlobContent);
     }
 
     private static void assertWriteAccessGranted(SegmentNodeStorePersistence persistence) throws Exception {
         getContainerFrom(persistence)
-                .getBlobClient("test.txt").upload(new ByteArrayInputStream("test".getBytes()));
+            .getBlockBlobReference("test.txt").uploadText("test");
     }
 
-    private static BlobContainerClient getContainerFrom(SegmentNodeStorePersistence persistence) throws Exception {
-        return ((AzurePersistence) persistence).getBlobContainerClient();
+    private static CloudBlobContainer getContainerFrom(SegmentNodeStorePersistence persistence) throws Exception {
+        return ((AzurePersistenceV8) persistence).getSegmentstoreDirectory().getContainer();
     }
 
     private static void assertWriteAccessNotGranted(SegmentNodeStorePersistence persistence) {
@@ -238,7 +243,7 @@ public class AzureSegmentStoreServiceTest {
     private static Instant yesterday() {
         return Instant.now().minus(Duration.ofDays(1));
     }
-
+    
     private static ImmutableSet<String> concat(ImmutableSet<String> blobs, String element) {
         return ImmutableSet.<String>builder().addAll(blobs).add(element).build();
     }
@@ -253,9 +258,9 @@ public class AzureSegmentStoreServiceTest {
 
     private static Configuration getConfigurationWithConfigurationURL(String accessKey) {
         String connectionString = "DefaultEndpointsProtocol=https;"
-                + "BlobEndpoint=" + azurite.getBlobEndpoint() + ';'
-                + "AccountName=" + AzuriteDockerRule.ACCOUNT_NAME + ';'
-                + "AccountKey=" + accessKey + ';';
+            + "BlobEndpoint=" + azurite.getBlobEndpoint() + ';'
+            + "AccountName=" + AzuriteDockerRule.ACCOUNT_NAME + ';'
+            + "AccountKey=" + accessKey + ';';
         return getConfiguration(null, AzuriteDockerRule.ACCOUNT_NAME, null, connectionString, null, null, null);
     }
 
