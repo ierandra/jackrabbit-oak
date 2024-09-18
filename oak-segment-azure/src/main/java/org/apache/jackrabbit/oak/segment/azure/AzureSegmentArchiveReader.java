@@ -30,7 +30,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static org.apache.jackrabbit.oak.segment.azure.AzureUtilities.readBufferFully;
 
@@ -66,7 +65,7 @@ public class AzureSegmentArchiveReader extends AbstractRemoteSegmentArchiveReade
     protected long computeArchiveIndexAndLength() throws IOException {
         long length = 0;
         ListBlobsOptions listBlobsOptions = new ListBlobsOptions();
-        listBlobsOptions.setPrefix(archivePath);
+        listBlobsOptions.setPrefix(archivePath + "/");
         for (BlobItem blob : AzureUtilities.getBlobs(blobContainerClient, listBlobsOptions)) {
             Map<String, String> metadata = blob.getMetadata();
             if (AzureBlobMetadata.isSegment(metadata)) {
@@ -81,7 +80,7 @@ public class AzureSegmentArchiveReader extends AbstractRemoteSegmentArchiveReade
 
     @Override
     protected void doReadSegmentToBuffer(String segmentFileName, Buffer buffer) throws IOException {
-        readBufferFully(getBlob(segmentFileName), buffer);
+        readBufferFully(getBlobClient(segmentFileName), buffer);
     }
 
     @Override
@@ -94,7 +93,7 @@ public class AzureSegmentArchiveReader extends AbstractRemoteSegmentArchiveReade
         return new File(archivePath);
     }
 
-    private BlockBlobClient getBlob(String name) throws IOException {
+    private BlockBlobClient getBlobClient(String name) throws IOException {
         try {
             String fullName = String.format("%s/%s", archivePath, name);
             return blobContainerClient.getBlobClient(fullName).getBlockBlobClient();
@@ -105,7 +104,7 @@ public class AzureSegmentArchiveReader extends AbstractRemoteSegmentArchiveReade
 
     private Buffer readBlob(String name) throws IOException {
         try {
-            BlockBlobClient blob = getBlob(name);
+            BlockBlobClient blob = getBlobClient(name);
             if (!blob.exists()) {
                 return null;
             }

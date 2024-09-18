@@ -24,7 +24,7 @@ import com.microsoft.azure.storage.blob.CloudBlobDirectory;
 import com.microsoft.azure.storage.blob.ListBlobItem;
 import com.microsoft.azure.storage.blob.DeleteSnapshotsOption;
 import com.microsoft.azure.storage.blob.BlobRequestOptions;
-import org.apache.jackrabbit.oak.segment.azure.util.AzureRequestOptions;
+import org.apache.jackrabbit.oak.segment.azure.util.AzureRequestOptionsV8;
 import org.apache.jackrabbit.oak.segment.azure.util.CaseInsensitiveKeysMapAccess;
 import org.apache.jackrabbit.oak.segment.remote.WriteAccessController;
 import org.apache.jackrabbit.oak.segment.spi.persistence.JournalFile;
@@ -168,7 +168,7 @@ public class AzureJournalFileV8 implements JournalFile {
         private final BlobRequestOptions writeOptimisedBlobRequestOptions;
 
         public AzureJournalWriter() throws IOException {
-            writeOptimisedBlobRequestOptions = AzureRequestOptions.optimiseForWriteOperations(directory.getServiceClient().getDefaultRequestOptions());
+            writeOptimisedBlobRequestOptions = AzureRequestOptionsV8.optimiseForWriteOperations(directory.getServiceClient().getDefaultRequestOptions());
 
             List<CloudAppendBlob> blobs = getJournalBlobs();
             if (blobs.isEmpty()) {

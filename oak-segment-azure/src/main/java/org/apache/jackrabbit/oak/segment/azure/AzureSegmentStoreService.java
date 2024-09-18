@@ -18,11 +18,13 @@
  */
 package org.apache.jackrabbit.oak.segment.azure;
 
+import com.azure.core.http.policy.RetryOptions;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.BlobStorageException;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.jackrabbit.oak.segment.azure.util.AzureRequestOptions;
 import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
 import org.apache.jackrabbit.oak.segment.azure.v8.AzureSegmentStoreServiceV8;
 import org.apache.jackrabbit.oak.segment.spi.persistence.SegmentNodeStorePersistence;
@@ -138,9 +140,10 @@ public class AzureSegmentStoreService {
     private static AzurePersistence createPersistenceFromServicePrincipalCredentials(Configuration configuration) throws IOException {
         AzureBlobContainerClientManager azureBlobContainerClientManager = new AzureBlobContainerClientManager();
         BlobContainerClient blobContainerClient = azureBlobContainerClientManager.getBlobContainerClientFromServicePrincipals(configuration.accountName(), configuration.containerName(), configuration.clientId(), configuration.clientSecret(), configuration.tenantId());
+        BlobContainerClient writeContainerClient = azureBlobContainerClientManager.getBlobContainerClientFromServicePrincipals(configuration.accountName(), configuration.containerName(), configuration.clientId(), configuration.clientSecret(), configuration.tenantId());
 
         try {
-            return createAzurePersistence(blobContainerClient, configuration, true);
+            return createAzurePersistence(blobContainerClient, writeContainerClient, configuration, true);
         } catch (BlobStorageException e) {
             throw new IOException(e);
         }
@@ -152,22 +155,32 @@ public class AzureSegmentStoreService {
             String containerName = configuration.containerName();
             String endpoint = String.format("https://%s.blob.core.windows.net", containerName);
 
+            RetryOptions retryOptions = AzureRequestOptions.getRetryOptionsDefault();
             BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
                     .endpoint(endpoint)
                     .connectionString(connectionString)
+                    .retryOptions(retryOptions)
                     .buildClient();
-
 
             BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
 
-            return createAzurePersistence(blobContainerClient, configuration, createContainer);
+            RetryOptions writeRetryOptions = AzureRequestOptions.getRetryOperationsOptimiseForWriteOperations();
+            BlobServiceClient writeBlobServiceClient = new BlobServiceClientBuilder()
+                    .endpoint(endpoint)
+                    .connectionString(connectionString)
+                    .retryOptions(writeRetryOptions)
+                    .buildClient();
+
+            BlobContainerClient writeBlobContainerClient = writeBlobServiceClient.getBlobContainerClient(containerName);
+
+            return createAzurePersistence(blobContainerClient, writeBlobContainerClient, configuration, createContainer);
         } catch (BlobStorageException e) {
             throw new IOException(e);
         }
     }
 
     @NotNull
-    private static AzurePersistence createAzurePersistence(BlobContainerClient blobContainerClient, Configuration configuration, boolean createContainer) throws BlobStorageException {
+    private static AzurePersistence createAzurePersistence(BlobContainerClient blobContainerClient, BlobContainerClient writeBlobContainerClient, Configuration configuration, boolean createContainer) throws BlobStorageException {
 
         //TODO: ierandra
         /*if (configuration.enableSecondaryLocation()) {
@@ -180,7 +193,7 @@ public class AzureSegmentStoreService {
             blobContainerClient.createIfNotExists();
         }
         String path = normalizePath(configuration.rootPath());
-        return new AzurePersistence(blobContainerClient, path);
+        return new AzurePersistence(blobContainerClient, writeBlobContainerClient, path);
     }
 
     @NotNull

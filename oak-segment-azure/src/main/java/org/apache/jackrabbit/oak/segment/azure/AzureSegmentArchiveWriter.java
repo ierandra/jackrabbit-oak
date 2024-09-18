@@ -72,7 +72,7 @@ public class AzureSegmentArchiveWriter extends AbstractRemoteSegmentArchiveWrite
         long msb = indexEntry.getMsb();
         long lsb = indexEntry.getLsb();
         String segmentName = getSegmentFileName(indexEntry);
-        BlockBlobClient blob = getBlob(segmentName);
+        BlockBlobClient blob = getBlockBlobClient(segmentName);
         ioMonitor.beforeSegmentWrite(new File(blob.getBlobName()), msb, lsb, size);
         Stopwatch stopwatch = Stopwatch.createStarted();
         try {
@@ -92,7 +92,7 @@ public class AzureSegmentArchiveWriter extends AbstractRemoteSegmentArchiveWrite
         } else {
             buffer = Buffer.allocate(indexEntry.getLength());
         }
-        readBufferFully(getBlob(getSegmentFileName(indexEntry)), buffer);
+        readBufferFully(getBlockBlobClient(getSegmentFileName(indexEntry)), buffer);
         return buffer;
     }
 
@@ -102,7 +102,7 @@ public class AzureSegmentArchiveWriter extends AbstractRemoteSegmentArchiveWrite
             try {
                 writeAccessController.checkWritingAllowed();
 
-                getBlob(getName() + extension).upload(BinaryData.fromBytes(data), true);
+                getBlockBlobClient(getName() + extension).upload(BinaryData.fromBytes(data), true);
             } catch (BlobStorageException e) {
                 throw new IOException(e);
             }
@@ -115,7 +115,7 @@ public class AzureSegmentArchiveWriter extends AbstractRemoteSegmentArchiveWrite
             try {
                 writeAccessController.checkWritingAllowed();
 
-                getBlob("closed").upload(BinaryData.fromBytes(new byte[0]), true);
+                getBlockBlobClient("closed").upload(BinaryData.fromBytes(new byte[0]), true);
             } catch (BlobStorageException e) {
                 throw new IOException(e);
             }
@@ -127,7 +127,7 @@ public class AzureSegmentArchiveWriter extends AbstractRemoteSegmentArchiveWrite
         // do nothing
     }
 
-    private BlockBlobClient getBlob(String name) throws IOException {
+    private BlockBlobClient getBlockBlobClient(String name) throws IOException {
         String blobFullName = String.format("%s/%s/%s", rootPrefix, archiveName, name);
         try {
             return blobContainerClient.getBlobClient(blobFullName).getBlockBlobClient();

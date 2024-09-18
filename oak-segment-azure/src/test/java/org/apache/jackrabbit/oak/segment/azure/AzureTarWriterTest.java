@@ -33,11 +33,13 @@ public class AzureTarWriterTest extends TarWriterTest {
     @ClassRule
     public static AzuriteDockerRule azurite = new AzuriteDockerRule();
 
-    private BlobContainerClient container;
+    private BlobContainerClient readBlobContainerClient;
+    private BlobContainerClient writeBlobContainerClient;
 
     @Before
     public void setUp() throws Exception {
-        container = azurite.getContainer("oak-test");
+        readBlobContainerClient = azurite.getReadBlobContainerClient("oak-test");
+        writeBlobContainerClient = azurite.getWriteBlobContainerClient("oak-test");
     }
 
     @NotNull
@@ -45,7 +47,7 @@ public class AzureTarWriterTest extends TarWriterTest {
     protected SegmentArchiveManager getSegmentArchiveManager() throws Exception {
         WriteAccessController writeAccessController = new WriteAccessController();
         writeAccessController.enableWriting();
-        AzureArchiveManager azureArchiveManager = new AzureArchiveManager(container, "oak", new IOMonitorAdapter(), monitor, writeAccessController);
+        AzureArchiveManager azureArchiveManager = new AzureArchiveManager(readBlobContainerClient, writeBlobContainerClient, "oak", new IOMonitorAdapter(), monitor, writeAccessController);
         return azureArchiveManager;
     }
 
@@ -54,10 +56,10 @@ public class AzureTarWriterTest extends TarWriterTest {
     protected SegmentArchiveManager getFailingSegmentArchiveManager() throws Exception {
         final WriteAccessController writeAccessController = new WriteAccessController();
         writeAccessController.enableWriting();
-        return new AzureArchiveManager(container, "oak", new IOMonitorAdapter(), monitor, writeAccessController) {
+        return new AzureArchiveManager(readBlobContainerClient, writeBlobContainerClient, "oak", new IOMonitorAdapter(), monitor, writeAccessController) {
             @Override
             public SegmentArchiveWriter create(String archiveName) throws IOException {
-                return new AzureSegmentArchiveWriter(blobContainerClient, "oak", archiveName, ioMonitor, monitor, writeAccessController) {
+                return new AzureSegmentArchiveWriter(writeBlobContainerClient, "oak", archiveName, ioMonitor, monitor, writeAccessController) {
                     @Override
                     public void writeGraph(@NotNull byte[] data) throws IOException {
                         throw new IOException("test");

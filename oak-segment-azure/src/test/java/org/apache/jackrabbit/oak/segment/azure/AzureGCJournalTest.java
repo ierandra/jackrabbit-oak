@@ -33,16 +33,18 @@ public class AzureGCJournalTest extends GcJournalTest {
     @ClassRule
     public static AzuriteDockerRule azurite = new AzuriteDockerRule();
 
-    private BlobContainerClient container;
+    private BlobContainerClient readBlobContainerClient;
+    private BlobContainerClient writeBlobContainerClient;
 
     @Before
     public void setup() throws BlobStorageException {
-        container = azurite.getContainer("oak-test");
+        readBlobContainerClient = azurite.getReadBlobContainerClient("oak-test");
+        writeBlobContainerClient = azurite.getWriteBlobContainerClient("oak-test");
     }
 
     @Override
     protected SegmentNodeStorePersistence getPersistence() throws Exception {
-        return new AzurePersistence(container, "oak");
+        return new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, "oak");
     }
 
     @Test

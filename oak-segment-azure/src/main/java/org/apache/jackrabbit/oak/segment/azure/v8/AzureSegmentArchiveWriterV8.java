@@ -33,7 +33,7 @@ import com.microsoft.azure.storage.blob.CloudBlockBlob;
 
 import org.apache.jackrabbit.oak.commons.Buffer;
 import org.apache.jackrabbit.oak.segment.azure.AzureBlobMetadata;
-import org.apache.jackrabbit.oak.segment.azure.util.AzureRequestOptions;
+import org.apache.jackrabbit.oak.segment.azure.util.AzureRequestOptionsV8;
 import org.apache.jackrabbit.oak.segment.remote.WriteAccessController;
 import org.apache.jackrabbit.oak.segment.azure.util.Retrier;
 import org.apache.jackrabbit.oak.segment.remote.AbstractRemoteSegmentArchiveWriter;
@@ -56,7 +56,7 @@ public class AzureSegmentArchiveWriterV8 extends AbstractRemoteSegmentArchiveWri
         super(ioMonitor, monitor);
         this.archiveDirectory = archiveDirectory;
         this.writeAccessController = writeAccessController;
-        this.writeOptimisedBlobRequestOptions = AzureRequestOptions.optimiseForWriteOperations(archiveDirectory.getServiceClient().getDefaultRequestOptions());
+        this.writeOptimisedBlobRequestOptions = AzureRequestOptionsV8.optimiseForWriteOperations(archiveDirectory.getServiceClient().getDefaultRequestOptions());
     }
 
     @Override

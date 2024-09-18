@@ -58,7 +58,7 @@ public class AzureRepositoryLockTest {
 
     @Before
     public void setup() throws BlobStorageException, InvalidKeyException, URISyntaxException {
-        container = azurite.getContainer("oak-test");
+        container = azurite.getReadBlobContainerClient("oak-test");
     }
 
     @Rule

@@ -47,16 +47,18 @@ public class AzureReadSegmentTest {
     @ClassRule
     public static AzuriteDockerRule azurite = new AzuriteDockerRule();
 
-    private BlobContainerClient container;
+    private BlobContainerClient readBlobContainerClient;
+    private BlobContainerClient writeBlobContainerClient;
 
     @Before
     public void setup() throws BlobStorageException, InvalidKeyException, URISyntaxException {
-        container = azurite.getContainer("oak-test");
+        readBlobContainerClient = azurite.getReadBlobContainerClient("oak-test");
+        writeBlobContainerClient = azurite.getWriteBlobContainerClient("oak-test");
     }
 
     @Test(expected = SegmentNotFoundException.class)
     public void testReadNonExistentSegmentRepositoryReachable() throws IOException, InvalidFileStoreVersionException, BlobStorageException {
-        AzurePersistence p = new AzurePersistence(container, "oak");
+        AzurePersistence p = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, "oak");
         FileStore fs = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(p).build();
         SegmentId id = new SegmentId(fs, 0, 0);
 
@@ -69,7 +71,7 @@ public class AzureReadSegmentTest {
 
     @Test(expected = RepositoryNotReachableException.class)
     public void testReadExistentSegmentRepositoryNotReachable() throws IOException, InvalidFileStoreVersionException, BlobStorageException {
-        AzurePersistence p = new ReadFailingAzurePersistence(container, "oak");
+        AzurePersistence p = new ReadFailingAzurePersistence(readBlobContainerClient, writeBlobContainerClient, "oak");
         FileStore fs = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(p).build();
 
         SegmentId id = new SegmentId(fs, 0, 0);
@@ -84,17 +86,17 @@ public class AzureReadSegmentTest {
     }
 
     static class ReadFailingAzurePersistence extends AzurePersistence {
-        public ReadFailingAzurePersistence(BlobContainerClient segmentStoreDirectory, String rootPrefix) {
-            super(segmentStoreDirectory, rootPrefix);
+        public ReadFailingAzurePersistence(BlobContainerClient readBlobContainerClient, BlobContainerClient writeBlobContainerClient, String rootPrefix) {
+            super(readBlobContainerClient, writeBlobContainerClient, rootPrefix);
         }
 
         @Override
         public SegmentArchiveManager createArchiveManager(boolean mmap, boolean offHeapAccess, IOMonitor ioMonitor,
                                                           FileStoreMonitor fileStoreMonitor, RemoteStoreMonitor remoteStoreMonitor) {
-            return new AzureArchiveManager(blobContainerClient, rootPrefix,ioMonitor, fileStoreMonitor, writeAccessController) {
+            return new AzureArchiveManager(readBlobContainerClient, writeBlobContainerClient, rootPrefix,ioMonitor, fileStoreMonitor, writeAccessController) {
                 @Override
                 public SegmentArchiveReader open(String archiveName) throws IOException {
-                    return new AzureSegmentArchiveReader(blobContainerClient, rootPrefix, archiveName, ioMonitor) {
+                    return new AzureSegmentArchiveReader(readBlobContainerClient, rootPrefix, archiveName, ioMonitor) {
                         @Override
                         public Buffer readSegment(long msb, long lsb) throws IOException {
                             throw new RepositoryNotReachableException(
@@ -105,7 +107,7 @@ public class AzureReadSegmentTest {
 
                 @Override
                 public SegmentArchiveWriter create(String archiveName) throws IOException {
-                    return new AzureSegmentArchiveWriter(blobContainerClient, rootPrefix, archiveName, ioMonitor, fileStoreMonitor, writeAccessController) {
+                    return new AzureSegmentArchiveWriter(writeBlobContainerClient, rootPrefix, archiveName, ioMonitor, fileStoreMonitor, writeAccessController) {
                         @Override
                         public Buffer readSegment(long msb, long lsb) throws IOException {
                             throw new RepositoryNotReachableException(

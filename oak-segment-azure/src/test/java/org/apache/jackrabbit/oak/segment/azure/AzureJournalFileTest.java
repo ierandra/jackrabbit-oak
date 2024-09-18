@@ -33,7 +33,6 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,20 +47,23 @@ public class AzureJournalFileTest {
     @ClassRule
     public static AzuriteDockerRule azurite = new AzuriteDockerRule();
 
-    private BlobContainerClient container;
+    private BlobContainerClient readBlobContainerClient;
+
+    private BlobContainerClient writeBlobContainerClient;
 
     private AzureJournalFile journal;
 
     @Before
     public void setup() throws BlobStorageException {
-        container = azurite.getContainer("oak-test");
+        readBlobContainerClient = azurite.getReadBlobContainerClient("oak-test");
+        writeBlobContainerClient = azurite.getWriteBlobContainerClient("oak-test");
         WriteAccessController writeAccessController = new WriteAccessController();
         writeAccessController.enableWriting();
-        journal = new AzureJournalFile(container, "journal.log", writeAccessController, 50);
+        journal = new AzureJournalFile(readBlobContainerClient, writeBlobContainerClient, "journal.log", writeAccessController, 50);
     }
 
     @Test
-    public void testSplitJournalFiles() throws IOException, URISyntaxException {
+    public void testSplitJournalFiles() throws IOException {
         assertFalse(journal.exists());
 
         int index = 0;
@@ -85,7 +87,7 @@ public class AzureJournalFileTest {
         ListBlobsOptions listBlobsOptions = new ListBlobsOptions();
         listBlobsOptions.setPrefix("journal.log");
 
-        List<BlobItem> result  = container.listBlobs(listBlobsOptions, null).stream().collect(Collectors.toList());
+        List<BlobItem> result  = readBlobContainerClient.listBlobs(listBlobsOptions, null).stream().collect(Collectors.toList());
         return result.size();
     }
 

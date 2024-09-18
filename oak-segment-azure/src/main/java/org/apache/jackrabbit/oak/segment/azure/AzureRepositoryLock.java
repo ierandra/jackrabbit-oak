@@ -133,9 +133,9 @@ public class AzureRepositoryLock implements RepositoryLock {
                 if (timeSinceLastUpdate > renewalInterval) {
 
                     // TODO: ierandra
-                    // leaseId = leaseClient.renewLeaseWithResponse((RequestConditions) null, Duration.ofMillis(LEASE_RENEWAL_TIMEOUT_MS), Context.NONE).getValue();
+                    leaseId = leaseClient.renewLeaseWithResponse((RequestConditions) null, Duration.ofMillis(LEASE_RENEWAL_TIMEOUT_MS), Context.NONE).getValue();
 
-                    leaseId = leaseClient.renewLease();
+                    //leaseId = leaseClient.renewLease();
 
                     writeAccessController.enableWriting();
                     lastUpdate = System.currentTimeMillis();

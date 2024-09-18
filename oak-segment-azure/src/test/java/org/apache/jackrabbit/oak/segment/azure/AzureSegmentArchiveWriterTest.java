@@ -57,18 +57,20 @@ public class AzureSegmentArchiveWriterTest {
     @ClassRule
     public static AzuriteDockerRule azurite = new AzuriteDockerRule();
 
-    private BlobContainerClient container;
+    private BlobContainerClient readBlobContainerClient;
+    private BlobContainerClient writeBlobContainerClient;
 
     @Before
     public void setUp() throws Exception {
-        container = azurite.getContainer("oak-test");
-
         System.setProperty("azure.segment.archive.writer.retries.intervalMs", "100");
         System.setProperty("azure.segment.archive.writer.retries.max", Integer.toString(MAX_ATTEMPTS));
 
         // Disable Azure SDK own retry mechanism used by AzureSegmentArchiveWriter
         System.setProperty("segment.azure.retry.attempts", "0");
         System.setProperty("segment.timeout.execution", "1");
+
+        readBlobContainerClient = azurite.getReadBlobContainerClient("oak-test");
+        writeBlobContainerClient = azurite.getWriteBlobContainerClient("oak-test");
     }
 
     @Test
@@ -170,7 +172,7 @@ public class AzureSegmentArchiveWriterTest {
     private SegmentArchiveWriter createSegmentArchiveWriter() throws  IOException {
         WriteAccessController writeAccessController = new WriteAccessController();
         writeAccessController.enableWriting();
-        AzurePersistence azurePersistence = new AzurePersistence(container, "oak");/**/
+        AzurePersistence azurePersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, "oak");/**/
         azurePersistence.setWriteAccessController(writeAccessController);
         SegmentArchiveManager manager = azurePersistence.createArchiveManager(false, false, new IOMonitorAdapter(), new FileStoreMonitorAdapter(), new RemoteStoreMonitorAdapter());
         SegmentArchiveWriter writer = manager.create("data00000a.tar");

@@ -17,13 +17,14 @@
 package org.apache.jackrabbit.oak.segment.azure;
 
 import com.azure.core.credential.AzureNamedKeyCredential;
+import com.azure.core.http.policy.RetryOptions;
 import com.azure.identity.ClientSecretCredential;
 import com.azure.identity.ClientSecretCredentialBuilder;
 import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.BlobContainerClientBuilder;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.jackrabbit.oak.segment.azure.util.AzureRequestOptions;
 import org.apache.jackrabbit.oak.segment.azure.util.Environment;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -56,10 +57,17 @@ public class AzureBlobContainerClientManager {
 
         String key = environment.getVariable(AZURE_SECRET_KEY);
         try {
-            return new BlobContainerClientBuilder()
+            String endpoint = String.format("https://%s.blob.core.windows.net", accountName);
+
+            RetryOptions retryOptions = AzureRequestOptions.getRetryOptionsDefault();
+
+            BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
+                    .endpoint(endpoint)
                     .credential(new AzureNamedKeyCredential(accountName, key))
-                    .containerName(containerName)
+                    .retryOptions(retryOptions)
                     .buildClient();
+
+            return blobServiceClient.getBlobContainerClient(containerName);
         } catch (IllegalArgumentException | StringIndexOutOfBoundsException e) {
             log.error("Error occurred while connecting to Azure Storage using secret key: ", e);
             throw new IllegalArgumentException(
@@ -76,9 +84,12 @@ public class AzureBlobContainerClientManager {
 
         String endpoint = String.format("https://%s.blob.core.windows.net", accountName);
 
+        RetryOptions retryOptions = AzureRequestOptions.getRetryOptionsDefault();
+
         BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
                 .endpoint(endpoint)
                 .credential(clientSecretCredential)
+                .retryOptions(retryOptions)
                 .buildClient();
 
         return blobServiceClient.getBlobContainerClient(containerName);

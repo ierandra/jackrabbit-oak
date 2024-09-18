@@ -38,7 +38,8 @@ public class AzureJournalFileConcurrencyIT {
     @ClassRule
     public static AzuriteDockerRule azurite = new AzuriteDockerRule();
 
-    private static BlobContainerClient container;
+    private static BlobContainerClient readBlobContainerClient;
+    private static BlobContainerClient writeBlobContainerClient;
 
     private static int suffix;
 
@@ -46,22 +47,23 @@ public class AzureJournalFileConcurrencyIT {
 
     @BeforeClass
     public static void connectToAzure() throws BlobStorageException {
-        container = azurite.getContainer("oak-test-" + System.currentTimeMillis());
-        container.createIfNotExists();
+        readBlobContainerClient = azurite.getReadBlobContainerClient("oak-test-" + System.currentTimeMillis());
+        writeBlobContainerClient = azurite.getWriteBlobContainerClient("oak-test-" + System.currentTimeMillis());
+        writeBlobContainerClient.createIfNotExists();
         suffix = 1;
     }
 
     @Before
     public void setup() throws BlobStorageException, InvalidKeyException, URISyntaxException, IOException, InterruptedException {
-        persistence = new AzurePersistence(container, ("oak-" + (suffix++)));
+        persistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, ("oak-" + (suffix++)));
         writeJournalLines(300, 0);
         log.info("Finished writing initial content to journal!");
     }
 
     @AfterClass
     public static void cleanupContainer() throws BlobStorageException {
-        if (container != null) {
-            container.deleteIfExists();
+        if (readBlobContainerClient != null) {
+            readBlobContainerClient.deleteIfExists();
         }
     }
 

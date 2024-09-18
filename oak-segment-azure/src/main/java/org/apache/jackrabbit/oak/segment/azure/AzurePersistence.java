@@ -37,24 +37,24 @@ import java.io.IOException;
 public class AzurePersistence implements SegmentNodeStorePersistence {
     private static final Logger log = LoggerFactory.getLogger(AzurePersistence.class);
 
-    protected final BlobContainerClient blobContainerClient;
+    protected final BlobContainerClient readBlobContainerClient;
+
+    protected BlobContainerClient writeBlobContainerClient;
 
     protected final String rootPrefix;
 
     protected WriteAccessController writeAccessController = new WriteAccessController();
 
-    public AzurePersistence(BlobContainerClient blobContainerClient, String rootPrefix) {
-        this.blobContainerClient = blobContainerClient;
+    public AzurePersistence(BlobContainerClient readBlobContainerClient, BlobContainerClient writeBlobContainerClient, String rootPrefix) {
+        this.readBlobContainerClient = readBlobContainerClient;
+        this.writeBlobContainerClient = writeBlobContainerClient;
         this.rootPrefix = rootPrefix;
-
-        //TODO: ierandra
-        //AzureRequestOptions.applyDefaultRequestOptions(segmentStoreDirectory.getServiceClient().getDefaultRequestOptions());
     }
 
     @Override
     public SegmentArchiveManager createArchiveManager(boolean mmap, boolean offHeapAccess, IOMonitor ioMonitor, FileStoreMonitor fileStoreMonitor, RemoteStoreMonitor remoteStoreMonitor) {
         attachRemoteStoreMonitor(remoteStoreMonitor);
-        return new AzureArchiveManager(blobContainerClient, rootPrefix, ioMonitor, fileStoreMonitor, writeAccessController);
+        return new AzureArchiveManager(readBlobContainerClient, writeBlobContainerClient, rootPrefix, ioMonitor, fileStoreMonitor, writeAccessController);
     }
 
     @Override
@@ -62,7 +62,7 @@ public class AzurePersistence implements SegmentNodeStorePersistence {
         try {
             ListBlobsOptions listOptions = new ListBlobsOptions();
             listOptions.setPrefix(rootPrefix + "/");
-            return blobContainerClient.listBlobs(listOptions, null).stream()
+            return readBlobContainerClient.listBlobs(listOptions, null).stream()
                     .filter(BlobItem::isPrefix)
                     .anyMatch(blobItem -> blobItem.getName().endsWith(".tar") || blobItem.getName().endsWith(".tar/"));
         } catch (BlobStorageException e) {
@@ -73,7 +73,7 @@ public class AzurePersistence implements SegmentNodeStorePersistence {
 
     @Override
     public JournalFile getJournalFile() {
-        return new AzureJournalFile(blobContainerClient, rootPrefix + "/journal.log", writeAccessController);
+        return new AzureJournalFile(readBlobContainerClient, writeBlobContainerClient, rootPrefix + "/journal.log", writeAccessController);
     }
 
     @Override
@@ -98,7 +98,7 @@ public class AzurePersistence implements SegmentNodeStorePersistence {
 
     private BlockBlobClient getBlockBlob(String path) throws IOException {
         try {
-            return blobContainerClient.getBlobClient(rootPrefix + "/" + path).getBlockBlobClient();
+            return readBlobContainerClient.getBlobClient(rootPrefix + "/" + path).getBlockBlobClient();
         } catch (BlobStorageException e) {
             throw new IOException(e);
         }
@@ -106,7 +106,7 @@ public class AzurePersistence implements SegmentNodeStorePersistence {
 
     private AppendBlobClient getAppendBlob(String path) throws IOException {
         try {
-            return blobContainerClient.getBlobClient(rootPrefix + "/" + path).getAppendBlobClient();
+            return readBlobContainerClient.getBlobClient(rootPrefix + "/" + path).getAppendBlobClient();
         } catch (BlobStorageException e) {
             throw new IOException(e);
         }
@@ -139,8 +139,8 @@ public class AzurePersistence implements SegmentNodeStorePersistence {
         });*/
     }
 
-    public BlobContainerClient getBlobContainerClient() {
-        return blobContainerClient;
+    public BlobContainerClient getReadBlobContainerClient() {
+        return readBlobContainerClient;
     }
 
     public void setWriteAccessController(WriteAccessController writeAccessController) {

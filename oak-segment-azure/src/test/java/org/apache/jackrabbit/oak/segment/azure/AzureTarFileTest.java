@@ -35,14 +35,17 @@ public class AzureTarFileTest extends TarFileTest {
     @ClassRule
     public static AzuriteDockerRule azurite = new AzuriteDockerRule();
 
-    private BlobContainerClient container;
+    private BlobContainerClient readBlobContainerClient;
+
+    private BlobContainerClient writeBlobContainerClient;
 
     @Before
     @Override
     public void setUp() throws IOException {
         try {
-            container = azurite.getContainer("oak-test");
-            AzurePersistence azurePersistence = new AzurePersistence(container, "oak");
+            readBlobContainerClient = azurite.getReadBlobContainerClient("oak-test");
+            writeBlobContainerClient = azurite.getWriteBlobContainerClient("oak-test");
+            AzurePersistence azurePersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, "oak");
             WriteAccessController writeAccessController = new WriteAccessController();
             writeAccessController.enableWriting();
             azurePersistence.setWriteAccessController(writeAccessController);

@@ -49,7 +49,9 @@ public class AzureArchiveManager implements SegmentArchiveManager {
 
     private static final Logger log = LoggerFactory.getLogger(AzureArchiveManager.class);
 
-    protected final BlobContainerClient blobContainerClient;
+    protected final BlobContainerClient readBlobContainerClient;
+
+    protected final BlobContainerClient writeBlobContainerClient;
 
     protected final String rootPrefix;
 
@@ -58,8 +60,9 @@ public class AzureArchiveManager implements SegmentArchiveManager {
     protected final FileStoreMonitor monitor;
     private WriteAccessController writeAccessController;
 
-    public AzureArchiveManager(BlobContainerClient blobContainerClient, String rootPrefix, IOMonitor ioMonitor, FileStoreMonitor fileStoreMonitor, WriteAccessController writeAccessController) {
-        this.blobContainerClient = blobContainerClient;
+    public AzureArchiveManager(BlobContainerClient readBlobContainerClient, BlobContainerClient writeBlobContainerClient, String rootPrefix, IOMonitor ioMonitor, FileStoreMonitor fileStoreMonitor, WriteAccessController writeAccessController) {
+        this.readBlobContainerClient = readBlobContainerClient;
+        this.writeBlobContainerClient = writeBlobContainerClient;
         this.rootPrefix = rootPrefix;
         this.ioMonitor = ioMonitor;
         this.monitor = fileStoreMonitor;
@@ -69,11 +72,12 @@ public class AzureArchiveManager implements SegmentArchiveManager {
     @Override
     public List<String> listArchives() throws IOException {
         try {
-            List<String> archiveNames = blobContainerClient.listBlobsByHierarchy(rootPrefix).stream()
-                    .filter(BlobItem::isPrefix)
-                    .filter(blobItem -> blobItem.getName().endsWith(".tar") || blobItem.getName().endsWith(".tar/"))
-                    .map(blobItem -> blobItem.getName().substring(rootPrefix.length() + 1, blobItem.getName().length() - 1))
+            List<String> archiveNames = readBlobContainerClient.listBlobs().stream()
+                    .filter(blobItem -> blobItem.getName().contains(".tar") || blobItem.getName().contains(".tar/"))
+                    .map(blobItem -> blobItem.getName().split("/")[1])
+                    .distinct()
                     .collect(Collectors.toList());
+
 
             Iterator<String> it = archiveNames.iterator();
             while (it.hasNext()) {
@@ -99,17 +103,17 @@ public class AzureArchiveManager implements SegmentArchiveManager {
         String fullBlobPrefix = String.format("%s/%s", getDirectory(archiveName), "0000.");
         ListBlobsOptions listBlobsOptions = new ListBlobsOptions();
         listBlobsOptions.setPrefix(fullBlobPrefix);
-        return blobContainerClient.listBlobs(listBlobsOptions, null).iterator().hasNext();
+        return !readBlobContainerClient.listBlobs(listBlobsOptions, null).iterator().hasNext();
     }
 
     @Override
     public SegmentArchiveReader open(String archiveName) throws IOException {
         try {
             String closedBlob = String.format("%s/%s", getDirectory(archiveName), "closed");
-            if (!blobContainerClient.getBlobClient(closedBlob).exists()) {
+            if (!readBlobContainerClient.getBlobClient(closedBlob).exists()) {
                 return null;
             }
-            return new AzureSegmentArchiveReader(blobContainerClient, rootPrefix, archiveName, ioMonitor);
+            return new AzureSegmentArchiveReader(readBlobContainerClient, rootPrefix, archiveName, ioMonitor);
         } catch (BlobStorageException e) {
             throw new IOException(e);
         }
@@ -117,12 +121,12 @@ public class AzureArchiveManager implements SegmentArchiveManager {
 
     @Override
     public SegmentArchiveReader forceOpen(String archiveName) throws IOException {
-        return new AzureSegmentArchiveReader(blobContainerClient, rootPrefix, archiveName, ioMonitor);
+        return new AzureSegmentArchiveReader(readBlobContainerClient, rootPrefix, archiveName, ioMonitor);
     }
 
     @Override
     public SegmentArchiveWriter create(String archiveName) throws IOException {
-        return new AzureSegmentArchiveWriter(blobContainerClient, rootPrefix, archiveName, ioMonitor, monitor, writeAccessController);
+        return new AzureSegmentArchiveWriter(writeBlobContainerClient, rootPrefix, archiveName, ioMonitor, monitor, writeAccessController);
     }
 
     @Override
@@ -132,7 +136,7 @@ public class AzureArchiveManager implements SegmentArchiveManager {
                     .forEach(blobItem -> {
                         try {
                             writeAccessController.checkWritingAllowed();
-                            blobContainerClient.getBlobClient(blobItem.getName()).delete();
+                            writeBlobContainerClient.getBlobClient(blobItem.getName()).delete();
                         } catch (BlobStorageException e) {
                             log.error("Can't delete segment {}", blobItem.getName(), e);
                         }
@@ -170,6 +174,7 @@ public class AzureArchiveManager implements SegmentArchiveManager {
         getBlobs(from)
                 .forEach(blobItem -> {
                     try {
+                        log.info("Backup segment: {}", blobItem.getName());
                         copyBlob(blobItem, targetDirectory);
                     } catch (IOException e) {
                         log.error("Can't copy segment {}", blobItem.getName(), e);
@@ -182,7 +187,7 @@ public class AzureArchiveManager implements SegmentArchiveManager {
         try {
             ListBlobsOptions listBlobsOptions = new ListBlobsOptions();
             listBlobsOptions.setPrefix(getDirectory(archiveName));
-            return blobContainerClient.listBlobs(listBlobsOptions, null).iterator().hasNext();
+            return readBlobContainerClient.listBlobs(listBlobsOptions, null).iterator().hasNext();
         } catch (BlobStorageException e) {
             log.error("Can't check the existence of {}", archiveName, e);
             return false;
@@ -206,7 +211,7 @@ public class AzureArchiveManager implements SegmentArchiveManager {
             if (length > 0) {
                 byte[] data;
                 try {
-                    data = blobContainerClient.getBlobClient(b.getName()).downloadContent().toBytes();
+                    data = readBlobContainerClient.getBlobClient(b.getName()).downloadContent().toBytes();
                 } catch (BlobStorageException e) {
                     throw new IOException(e);
                 }
@@ -228,11 +233,11 @@ public class AzureArchiveManager implements SegmentArchiveManager {
     }
 
     private void delete(String archiveName, Set<UUID> recoveredEntries) throws IOException {
-        getBlobs(archiveName)
+        getBlobs(archiveName + "/")
                 .forEach(blobItem -> {
                     if (!recoveredEntries.contains(RemoteUtilities.getSegmentUUID(getName(blobItem)))) {
                         try {
-                            blobContainerClient.getBlobClient(blobItem.getName()).delete();
+                            writeBlobContainerClient.getBlobClient(blobItem.getName()).delete();
                         } catch (BlobStorageException e) {
                             log.error("Can't delete segment {}", blobItem.getName(), e);
                         }
@@ -260,13 +265,13 @@ public class AzureArchiveManager implements SegmentArchiveManager {
         ListBlobsOptions listBlobsOptions = new ListBlobsOptions();
         listBlobsOptions.setPrefix(archivePath);
 
-        return AzureUtilities.getBlobs(blobContainerClient, listBlobsOptions);
+        return AzureUtilities.getBlobs(readBlobContainerClient, listBlobsOptions);
     }
 
     private void renameBlob(BlobItem blob, String newParent) throws IOException {
         copyBlob(blob, newParent);
         try {
-           blobContainerClient.getBlobClient(blob.getName()).delete();
+           writeBlobContainerClient.getBlobClient(blob.getName()).delete();
         } catch (BlobStorageException e) {
             throw new IOException(e);
         }
@@ -276,10 +281,10 @@ public class AzureArchiveManager implements SegmentArchiveManager {
         //TODO: ierandra
         // checkArgument(blob instanceof CloudBlockBlob, "Only page blobs are supported for the rename");
 
-        BlockBlobClient sourceBlobClient = blobContainerClient.getBlobClient(blob.getName()).getBlockBlobClient();
+        BlockBlobClient sourceBlobClient = readBlobContainerClient.getBlobClient(blob.getName()).getBlockBlobClient();
 
         String destinationBlob = String.format("%s/%s", newParent, AzureUtilities.getName(blob));
-        BlockBlobClient destinationBlobClient = blobContainerClient.getBlobClient(destinationBlob).getBlockBlobClient();
+        BlockBlobClient destinationBlobClient = writeBlobContainerClient.getBlobClient(destinationBlob).getBlockBlobClient();
 
         PollResponse<BlobCopyInfo> response = destinationBlobClient.beginCopy(sourceBlobClient.getBlobUrl(),  Duration.ofMillis(100)).waitForCompletion();
 

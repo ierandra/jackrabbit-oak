@@ -75,7 +75,7 @@ public class AzureSegmentStoreServiceTest {
 
     @Before
     public void setup() throws Exception {
-        container = azurite.getContainer(AzureSegmentStoreService.DEFAULT_CONTAINER_NAME);
+        container = azurite.getReadBlobContainerClient(AzureSegmentStoreService.DEFAULT_CONTAINER_NAME);
         for (String blob : BLOBS) {
             container.getBlobClient(blob + ".txt").getBlockBlobClient().upload(new ByteArrayInputStream(blob.getBytes()), blob.length());
         }
@@ -214,7 +214,7 @@ public class AzureSegmentStoreServiceTest {
     }
 
     private static BlobContainerClient getContainerFrom(SegmentNodeStorePersistence persistence) throws Exception {
-        return ((AzurePersistence) persistence).getBlobContainerClient();
+        return ((AzurePersistence) persistence).getReadBlobContainerClient();
     }
 
     private static void assertWriteAccessNotGranted(SegmentNodeStorePersistence persistence) {

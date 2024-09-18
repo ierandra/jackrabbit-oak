@@ -16,9 +16,12 @@
  */
 package org.apache.jackrabbit.oak.segment.azure;
 
+import com.azure.core.http.policy.RetryOptions;
 import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.BlobContainerClientBuilder;
+import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.BlobStorageException;
+import org.apache.jackrabbit.oak.segment.azure.util.AzureRequestOptions;
 import org.junit.Assume;
 import org.junit.rules.ExternalResource;
 import org.junit.runner.Description;
@@ -97,18 +100,33 @@ public class AzuriteDockerRule extends ExternalResource {
         return "http://127.0.0.1:" + getMappedPort() + "/devstoreaccount1";
     }
 
-    public BlobContainerClient getContainer(String name) throws BlobStorageException {
-        BlobContainerClient cloud = getCloudStorageAccount(name);
+    public BlobContainerClient getReadBlobContainerClient(String name) throws BlobStorageException {
+        BlobContainerClient cloud = getCloudStorageAccount(name, AzureRequestOptions.getRetryOptionsDefault());
         cloud.deleteIfExists();
         cloud.create();
         return cloud;
     }
 
-    public BlobContainerClient getCloudStorageAccount(String containerName) {
+    public BlobContainerClient getWriteBlobContainerClient(String name) throws BlobStorageException {
+        BlobContainerClient cloud = getCloudStorageAccount(name, AzureRequestOptions.getRetryOperationsOptimiseForWriteOperations());
+        return cloud;
+    }
+
+    public BlobContainerClient getCloudStorageAccount(String containerName, RetryOptions retryOptions) {
         String blobEndpoint = "BlobEndpoint=" + getBlobEndpoint();
         String accountName = "AccountName=" + ACCOUNT_NAME;
         String accountKey = "AccountKey=" + ACCOUNT_KEY;
-        return new BlobContainerClientBuilder().connectionString(("DefaultEndpointsProtocol=http;" + ";" + accountName + ";" + accountKey + ";" + blobEndpoint)).containerName(containerName).buildClient();
+
+
+        BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
+                .endpoint(getBlobEndpoint())
+                .connectionString(("DefaultEndpointsProtocol=http;" + ";" + accountName + ";" + accountKey + ";" + blobEndpoint))
+                .retryOptions(retryOptions)
+                .buildClient();
+
+        return blobServiceClient.getBlobContainerClient(containerName);
+
+        //return new BlobContainerClientBuilder().connectionString(("DefaultEndpointsProtocol=http;" + ";" + accountName + ";" + accountKey + ";" + blobEndpoint)).containerName(containerName).buildClient();
     }
 
     public int getMappedPort() {
