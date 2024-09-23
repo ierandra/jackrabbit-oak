@@ -18,8 +18,11 @@
  */
 package org.apache.jackrabbit.oak.segment.azure;
 
+import com.azure.core.http.HttpHeaderName;
+import com.azure.core.http.HttpHeaders;
 import com.azure.core.http.RequestConditions;
 import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.models.BlobErrorCode;
 import com.azure.storage.blob.models.BlobStorageException;
 import com.azure.storage.blob.specialized.BlobLeaseClient;
 import com.azure.storage.blob.specialized.BlobLeaseClientBuilder;
@@ -141,8 +144,14 @@ public class AzureRepositoryLockTest {
         BlobLeaseClient blobLeaseMocked = Mockito.spy(blobLeaseClient);
 
         // instrument the mock to throw the exception twice when renewing the lease
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaderName.fromString("x-ms-error-code"), BlobErrorCode.OPERATION_TIMED_OUT.toString());
+
+        MockHttpResponse mockHttpResponse = new MockHttpResponse(306, "operation timeout");
+        mockHttpResponse.setHeaders(headers);
+
         BlobStorageException storageException =
-                new BlobStorageException("operation timeout", null, new TimeoutException());
+                new BlobStorageException("operation timeout", mockHttpResponse, new TimeoutException());
 
         Mockito
                 .doCallRealMethod()
