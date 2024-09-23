@@ -1,21 +1,19 @@
 package org.apache.jackrabbit.oak.segment.azure;
 
-import com.azure.core.http.HttpHeaderName;
 import com.azure.core.http.HttpHeaders;
 import com.azure.core.http.HttpResponse;
-import com.azure.storage.blob.models.BlobErrorCode;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
-public class MockHttpResponse extends HttpResponse {
+public class MockAzureHttpResponse extends HttpResponse {
 
     private final int statusCode;
     private final String body;
     private HttpHeaders headers;
 
-    public MockHttpResponse(int statusCode, String body) {
+    public MockAzureHttpResponse(int statusCode, String body) {
         super(null);
         this.statusCode = statusCode;
         this.body = body;

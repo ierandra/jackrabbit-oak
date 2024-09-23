@@ -147,11 +147,11 @@ public class AzureRepositoryLockTest {
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaderName.fromString("x-ms-error-code"), BlobErrorCode.OPERATION_TIMED_OUT.toString());
 
-        MockHttpResponse mockHttpResponse = new MockHttpResponse(306, "operation timeout");
-        mockHttpResponse.setHeaders(headers);
+        MockAzureHttpResponse mockAzureHttpResponse = new MockAzureHttpResponse(306, "operation timeout");
+        mockAzureHttpResponse.setHeaders(headers);
 
         BlobStorageException storageException =
-                new BlobStorageException("operation timeout", mockHttpResponse, new TimeoutException());
+                new BlobStorageException("operation timeout", mockAzureHttpResponse, new TimeoutException());
 
         Mockito
                 .doCallRealMethod()
