@@ -14,39 +14,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.jackrabbit.oak.segment.azure.journal;
+package org.apache.jackrabbit.oak.segment.azure.journal.v8;
 
-import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.models.BlobStorageException;
-import org.apache.jackrabbit.oak.segment.azure.AzurePersistence;
-import org.apache.jackrabbit.oak.segment.azure.AzuriteDockerRule;
-import org.apache.jackrabbit.oak.segment.file.TarRevisionsTest;
+import com.microsoft.azure.storage.blob.CloudBlobContainer;
+
+import org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzuriteDockerRule;
 import org.apache.jackrabbit.oak.segment.spi.persistence.SegmentNodeStorePersistence;
+import org.apache.jackrabbit.oak.segment.file.TarRevisionsTest;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
 import org.junit.Before;
 import org.junit.ClassRule;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 
-public class AzureTarRevisionsTest extends TarRevisionsTest {
+public class AzureTarRevisionsV8Test extends TarRevisionsTest {
 
     @ClassRule
     public static AzuriteDockerRule azurite = new AzuriteDockerRule();
 
-    private BlobContainerClient readBlobContainerClient;
-    private BlobContainerClient writeBlobContainerClient;
+    private CloudBlobContainer container;
 
     @Before
     public void setup() throws Exception {
-        readBlobContainerClient = azurite.getReadBlobContainerClient("oak-test");
-        writeBlobContainerClient = azurite.getWriteBlobContainerClient("oak-test");
+        container = azurite.getContainer("oak-test");
         super.setup();
     }
 
     @Override
     protected SegmentNodeStorePersistence getPersistence() throws IOException {
         try {
-            return new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, "oak");
-        } catch (BlobStorageException e) {
+            return new AzurePersistenceV8(container.getDirectoryReference("oak"));
+        } catch (URISyntaxException e) {
             throw new IOException(e);
         }
     }
