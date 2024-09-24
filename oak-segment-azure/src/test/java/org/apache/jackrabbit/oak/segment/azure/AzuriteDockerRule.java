@@ -125,8 +125,6 @@ public class AzuriteDockerRule extends ExternalResource {
                 .buildClient();
 
         return blobServiceClient.getBlobContainerClient(containerName);
-
-        //return new BlobContainerClientBuilder().connectionString(("DefaultEndpointsProtocol=http;" + ";" + accountName + ";" + accountKey + ";" + blobEndpoint)).containerName(containerName).buildClient();
     }
 
     public int getMappedPort() {

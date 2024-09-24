@@ -45,7 +45,7 @@ import static org.mockserver.model.HttpResponse.response;
 import static org.mockserver.verify.VerificationTimes.exactly;
 
 public class AzureSegmentArchiveWriterTest {
-    public static final String BASE_PATH = "/devstoreaccount1";
+    public static final String BASE_PATH = "/devstoreaccount1/oak-test";
     public static final int MAX_ATTEMPTS = 3;
 
     @Rule
