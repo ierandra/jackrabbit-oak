@@ -21,7 +21,6 @@ import com.azure.core.util.Context;
 import com.azure.storage.blob.models.BlobErrorCode;
 import com.azure.storage.blob.models.BlobStorageException;
 import com.azure.storage.blob.specialized.BlobLeaseClient;
-import com.azure.storage.blob.specialized.BlobLeaseClientBuilder;
 import com.azure.storage.blob.specialized.BlockBlobClient;
 import org.apache.jackrabbit.oak.segment.remote.WriteAccessController;
 import org.apache.jackrabbit.oak.segment.spi.persistence.RepositoryLock;
@@ -131,11 +130,7 @@ public class AzureRepositoryLock implements RepositoryLock {
             long timeSinceLastUpdate = (System.currentTimeMillis() - lastUpdate) / 1000;
             try {
                 if (timeSinceLastUpdate > renewalInterval) {
-
-                    // TODO: ierandra
                     leaseId = leaseClient.renewLeaseWithResponse((RequestConditions) null, Duration.ofMillis(LEASE_RENEWAL_TIMEOUT_MS), Context.NONE).getValue();
-
-                    //leaseId = leaseClient.renewLease();
 
                     writeAccessController.enableWriting();
                     lastUpdate = System.currentTimeMillis();

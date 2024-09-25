@@ -19,27 +19,27 @@
 
 package org.apache.jackrabbit.oak.segment.azure.fixture;
 
-import com.azure.core.http.policy.RetryOptions;
-import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.BlobServiceClient;
-import com.azure.storage.blob.BlobServiceClientBuilder;
-import com.azure.storage.blob.models.BlobStorageException;
 import org.apache.jackrabbit.guava.common.io.Files;
+import com.microsoft.azure.storage.CloudStorageAccount;
+import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.blob.CloudBlobContainer;
+import com.microsoft.azure.storage.blob.CloudBlobDirectory;
 import org.apache.jackrabbit.oak.fixture.NodeStoreFixture;
 import org.apache.jackrabbit.oak.segment.SegmentNodeStoreBuilders;
-import org.apache.jackrabbit.oak.segment.azure.AzurePersistence;
-import org.apache.jackrabbit.oak.segment.azure.util.AzureRequestOptions;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
 import org.apache.jackrabbit.oak.segment.file.FileStore;
 import org.apache.jackrabbit.oak.segment.file.FileStoreBuilder;
 import org.apache.jackrabbit.oak.segment.file.InvalidFileStoreVersionException;
 import org.apache.jackrabbit.oak.spi.state.NodeStore;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.security.InvalidKeyException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public class SegmentAzureFixture extends NodeStoreFixture {
+public class SegmentAzureFixtureV8 extends NodeStoreFixture {
 
     private static final String AZURE_CONNECTION_STRING = System.getProperty("oak.segment.azure.connection", "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;");
 
@@ -49,39 +49,26 @@ public class SegmentAzureFixture extends NodeStoreFixture {
 
     private Map<NodeStore, FileStore> fileStoreMap = new HashMap<>();
 
-    private Map<NodeStore, BlobContainerClient> containerMap = new HashMap<>();
+    private Map<NodeStore, CloudBlobContainer> containerMap = new HashMap<>();
 
     @Override
     public NodeStore createNodeStore() {
-        AzurePersistence persistence;
-        BlobContainerClient writeBlobContainerClient;
+        AzurePersistenceV8 persistence;
+        CloudBlobContainer container;
         try {
-            String containerName = AZURE_CONTAINER + "-" + UUID.randomUUID().toString();
+            CloudStorageAccount cloud = CloudStorageAccount.parse(AZURE_CONNECTION_STRING);
 
-            String endpoint = String.format("https://%s.blob.core.windows.net", containerName);
-
-            RetryOptions retryOptions = AzureRequestOptions.getRetryOptionsDefault();
-            BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
-                    .endpoint(endpoint)
-                    .connectionString(AZURE_CONNECTION_STRING)
-                    .retryOptions(retryOptions)
-                    .buildClient();
-
-            BlobContainerClient reaBlobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
-
-            RetryOptions writeRetryOptions = AzureRequestOptions.getRetryOperationsOptimiseForWriteOperations();
-            BlobServiceClient writeBlobServiceClient = new BlobServiceClientBuilder()
-                    .endpoint(endpoint)
-                    .connectionString(AZURE_CONNECTION_STRING)
-                    .retryOptions(writeRetryOptions)
-                    .buildClient();
-
-            writeBlobContainerClient = writeBlobServiceClient.getBlobContainerClient(containerName);
-
-            writeBlobContainerClient.createIfNotExists();
-
-            persistence = new AzurePersistence(reaBlobContainerClient, writeBlobContainerClient, AZURE_ROOT_PATH);
-        } catch (BlobStorageException e) {
+            while (true) {
+                String containerName = AZURE_CONTAINER + "-" + UUID.randomUUID().toString();
+                container = cloud.createCloudBlobClient().getContainerReference(containerName);
+                if (!container.exists()) {
+                    container.create();
+                    break;
+                }
+            }
+            CloudBlobDirectory directory = container.getDirectoryReference(AZURE_ROOT_PATH);
+            persistence = new AzurePersistenceV8(directory);
+        } catch (StorageException | URISyntaxException | InvalidKeyException e) {
             throw new RuntimeException(e);
         }
 
@@ -89,7 +76,7 @@ public class SegmentAzureFixture extends NodeStoreFixture {
             FileStore fileStore = FileStoreBuilder.fileStoreBuilder(Files.createTempDir()).withCustomPersistence(persistence).build();
             NodeStore nodeStore = SegmentNodeStoreBuilders.builder(fileStore).build();
             fileStoreMap.put(nodeStore, fileStore);
-            containerMap.put(nodeStore, writeBlobContainerClient);
+            containerMap.put(nodeStore, container);
             return nodeStore;
         } catch (IOException | InvalidFileStoreVersionException e) {
             throw new RuntimeException(e);
@@ -102,11 +89,11 @@ public class SegmentAzureFixture extends NodeStoreFixture {
             fs.close();
         }
         try {
-            BlobContainerClient container = containerMap.remove(nodeStore);
+            CloudBlobContainer container = containerMap.remove(nodeStore);
             if (container != null) {
                 container.deleteIfExists();
             }
-        } catch (BlobStorageException e) {
+        } catch (StorageException e) {
             throw new RuntimeException(e);
         }
     }

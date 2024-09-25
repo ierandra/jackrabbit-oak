@@ -19,7 +19,6 @@ package org.apache.jackrabbit.oak.segment.azure;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobStorageException;
-import com.azure.storage.blob.models.ListBlobsOptions;
 import com.azure.storage.blob.specialized.AppendBlobClient;
 import com.azure.storage.blob.specialized.BlobLeaseClient;
 import com.azure.storage.blob.specialized.BlobLeaseClientBuilder;
@@ -60,9 +59,7 @@ public class AzurePersistence implements SegmentNodeStorePersistence {
     @Override
     public boolean segmentFilesExist() {
         try {
-            ListBlobsOptions listOptions = new ListBlobsOptions();
-            listOptions.setPrefix(rootPrefix + "/");
-            return readBlobContainerClient.listBlobs(listOptions, null).stream()
+            return readBlobContainerClient.listBlobsByHierarchy(rootPrefix + "/").stream()
                     .filter(BlobItem::isPrefix)
                     .anyMatch(blobItem -> blobItem.getName().endsWith(".tar") || blobItem.getName().endsWith(".tar/"));
         } catch (BlobStorageException e) {

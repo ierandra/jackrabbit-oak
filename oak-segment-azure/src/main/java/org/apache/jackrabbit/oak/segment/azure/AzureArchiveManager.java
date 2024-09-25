@@ -36,12 +36,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.UUID;
+import java.util.Set;
 import java.time.Duration;
-import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static com.azure.storage.blob.models.BlobType.BLOCK_BLOB;
 import static org.apache.jackrabbit.guava.common.base.Preconditions.checkArgument;
 import static org.apache.jackrabbit.oak.segment.azure.AzureUtilities.getName;
 
@@ -72,10 +81,13 @@ public class AzureArchiveManager implements SegmentArchiveManager {
     @Override
     public List<String> listArchives() throws IOException {
         try {
-            List<String> archiveNames = readBlobContainerClient.listBlobs().stream()
-                    .filter(blobItem -> blobItem.getName().contains(".tar") || blobItem.getName().contains(".tar/"))
-                    .map(blobItem -> blobItem.getName().split("/")[1])
-                    .distinct()
+            List<String> archiveNames = readBlobContainerClient.listBlobsByHierarchy(rootPrefix + "/").stream()
+                    .filter(BlobItem::isPrefix)
+                    .filter(blobItem -> blobItem.getName().endsWith(".tar") || blobItem.getName().endsWith(".tar/"))
+                    .map(BlobItem::getName)
+                    .map(Paths::get)
+                    .map(Path::getFileName)
+                    .map(Path::toString)
                     .collect(Collectors.toList());
 
 
@@ -158,7 +170,7 @@ public class AzureArchiveManager implements SegmentArchiveManager {
                             writeAccessController.checkWritingAllowed();
                             renameBlob(blobItem, targetDirectory);
                         } catch (IOException e) {
-                            log.error("Can't rename segment {}", blobItem.getName() , e);
+                            log.error("Can't rename segment {}", blobItem.getName(), e);
                         }
                     });
             return true;
@@ -271,26 +283,25 @@ public class AzureArchiveManager implements SegmentArchiveManager {
     private void renameBlob(BlobItem blob, String newParent) throws IOException {
         copyBlob(blob, newParent);
         try {
-           writeBlobContainerClient.getBlobClient(blob.getName()).delete();
+            writeBlobContainerClient.getBlobClient(blob.getName()).delete();
         } catch (BlobStorageException e) {
             throw new IOException(e);
         }
     }
 
     private void copyBlob(BlobItem blob, String newParent) throws IOException {
-        //TODO: ierandra
-        // checkArgument(blob instanceof CloudBlockBlob, "Only page blobs are supported for the rename");
+         checkArgument(blob.getProperties().getBlobType() == BLOCK_BLOB, "Only page blobs are supported for the rename");
 
         BlockBlobClient sourceBlobClient = readBlobContainerClient.getBlobClient(blob.getName()).getBlockBlobClient();
 
         String destinationBlob = String.format("%s/%s", newParent, AzureUtilities.getName(blob));
         BlockBlobClient destinationBlobClient = writeBlobContainerClient.getBlobClient(destinationBlob).getBlockBlobClient();
 
-        PollResponse<BlobCopyInfo> response = destinationBlobClient.beginCopy(sourceBlobClient.getBlobUrl(),  Duration.ofMillis(100)).waitForCompletion();
+        PollResponse<BlobCopyInfo> response = destinationBlobClient.beginCopy(sourceBlobClient.getBlobUrl(), Duration.ofMillis(100)).waitForCompletion();
 
         String finalStatus = response.getValue().getCopyStatus().toString();
         if (response.getValue().getCopyStatus() != CopyStatusType.SUCCESS) {
-            throw new IOException("Invalid copy status for " + blob.getName()+ ": " + finalStatus);
+            throw new IOException("Invalid copy status for " + blob.getName() + ": " + finalStatus);
         }
 
     }

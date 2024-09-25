@@ -38,9 +38,9 @@ public class AzureGCJournalFile implements GCJournalFile {
     @Override
     public void writeLine(String line) throws IOException {
         try {
+            String appendLine = line + "\n";
             gcJournal.createIfNotExists();
-            //TODO: ierandra
-            gcJournal.getBlobOutputStream().write((line + "\n").getBytes());
+            gcJournal.appendBlock(new ByteArrayInputStream((appendLine).getBytes()), appendLine.length());
         } catch (BlobStorageException e) {
             throw new IOException(e);
         }
