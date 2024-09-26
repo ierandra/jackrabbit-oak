@@ -16,11 +16,11 @@
  */
 package org.apache.jackrabbit.oak.segment.azure;
 
-import com.azure.core.http.policy.RetryOptions;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.BlobStorageException;
+import com.azure.storage.common.policy.RequestRetryOptions;
 import org.apache.jackrabbit.oak.segment.azure.util.AzureRequestOptions;
 import org.junit.Assume;
 import org.junit.rules.ExternalResource;
@@ -112,7 +112,7 @@ public class AzuriteDockerRule extends ExternalResource {
         return cloud;
     }
 
-    public BlobContainerClient getCloudStorageAccount(String containerName, RetryOptions retryOptions) {
+    public BlobContainerClient getCloudStorageAccount(String containerName, RequestRetryOptions retryOptions) {
         String blobEndpoint = "BlobEndpoint=" + getBlobEndpoint();
         String accountName = "AccountName=" + ACCOUNT_NAME;
         String accountKey = "AccountKey=" + ACCOUNT_KEY;

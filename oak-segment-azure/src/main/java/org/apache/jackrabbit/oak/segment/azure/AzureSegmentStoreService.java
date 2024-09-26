@@ -18,23 +18,9 @@
  */
 package org.apache.jackrabbit.oak.segment.azure;
 
-import com.azure.core.http.HttpClient;
-import com.azure.core.http.HttpPipeline;
-import com.azure.core.http.HttpPipelineBuilder;
-import com.azure.core.http.policy.AddDatePolicy;
-import com.azure.core.http.policy.HttpPipelinePolicy;
-import com.azure.core.http.policy.RetryOptions;
-import com.azure.core.http.policy.RetryPolicy;
-import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.BlobServiceClient;
-import com.azure.storage.blob.BlobServiceClientBuilder;
-import com.azure.storage.blob.models.BlobStorageException;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.jackrabbit.oak.segment.azure.util.AzureRequestOptions;
 import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
 import org.apache.jackrabbit.oak.segment.azure.v8.AzureSegmentStoreServiceV8;
 import org.apache.jackrabbit.oak.segment.spi.persistence.SegmentNodeStorePersistence;
-import org.jetbrains.annotations.NotNull;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
@@ -62,7 +48,6 @@ public class AzureSegmentStoreService {
     public static final String DEFAULT_ROOT_PATH = "/oak";
 
     public static final boolean DEFAULT_ENABLE_SECONDARY_LOCATION = false;
-    public static final String DEFAULT_ENDPOINT_SUFFIX = "core.windows.net";
 
     private ServiceRegistration registration;
 
@@ -73,7 +58,7 @@ public class AzureSegmentStoreService {
     public void activate(ComponentContext context, Configuration config) throws IOException {
         if (useAzureSdkV12) {
             log.info("Starting nodestore using Azure SDK 12");
-            AzurePersistence persistence = createAzurePersistenceFrom(config);
+            AzurePersistence persistence = AzurePersistenceManager.createAzurePersistenceFrom(config);
             registration = context.getBundleContext()
                     .registerService(SegmentNodeStorePersistence.class, persistence, new Hashtable<String, Object>() {{
                         put(SERVICE_PID, String.format("%s(%s, %s)", AzurePersistence.class.getName(), config.accountName(), config.rootPath()));
@@ -100,118 +85,6 @@ public class AzureSegmentStoreService {
             registration.unregister();
             registration = null;
         }
-    }
-
-    private static AzurePersistence createAzurePersistenceFrom(Configuration configuration) throws IOException {
-        if (!StringUtils.isBlank(configuration.connectionURL())) {
-            return createPersistenceFromConnectionURL(configuration);
-        }
-        if (!StringUtils.isAnyBlank(configuration.clientId(), configuration.clientSecret(), configuration.tenantId())) {
-            return createPersistenceFromServicePrincipalCredentials(configuration);
-        }
-        if (!StringUtils.isBlank(configuration.sharedAccessSignature())) {
-            return createPersistenceFromSasUri(configuration);
-        }
-        return createPersistenceFromAccessKey(configuration);
-    }
-
-    private static AzurePersistence createPersistenceFromAccessKey(Configuration configuration) throws IOException {
-        StringBuilder connectionString = new StringBuilder();
-        connectionString.append("DefaultEndpointsProtocol=https;");
-        connectionString.append("AccountName=").append(configuration.accountName()).append(';');
-        connectionString.append("AccountKey=").append(configuration.accessKey()).append(';');
-        if (!StringUtils.isBlank(configuration.blobEndpoint())) {
-            connectionString.append("BlobEndpoint=").append(configuration.blobEndpoint()).append(';');
-        }
-        return createAzurePersistence(connectionString.toString(), configuration, true);
-    }
-
-    private static AzurePersistence createPersistenceFromSasUri(Configuration configuration) throws IOException {
-        StringBuilder connectionString = new StringBuilder();
-        connectionString.append("DefaultEndpointsProtocol=https;");
-        connectionString.append("AccountName=").append(configuration.accountName()).append(';');
-        connectionString.append("SharedAccessSignature=").append(configuration.sharedAccessSignature()).append(';');
-        if (!StringUtils.isBlank(configuration.blobEndpoint())) {
-            connectionString.append("BlobEndpoint=").append(configuration.blobEndpoint()).append(';');
-        }
-        return createAzurePersistence(connectionString.toString(), configuration, false);
-    }
-
-    @NotNull
-    private static AzurePersistence createPersistenceFromConnectionURL(Configuration configuration) throws IOException {
-        return createAzurePersistence(configuration.connectionURL(), configuration, true);
-    }
-
-    @NotNull
-    private static AzurePersistence createPersistenceFromServicePrincipalCredentials(Configuration configuration) throws IOException {
-        AzureBlobContainerClientManager azureBlobContainerClientManager = new AzureBlobContainerClientManager();
-        BlobContainerClient blobContainerClient = azureBlobContainerClientManager.getBlobContainerClientFromServicePrincipals(configuration.accountName(), configuration.containerName(), configuration.clientId(), configuration.clientSecret(), configuration.tenantId());
-        BlobContainerClient writeContainerClient = azureBlobContainerClientManager.getBlobContainerClientFromServicePrincipals(configuration.accountName(), configuration.containerName(), configuration.clientId(), configuration.clientSecret(), configuration.tenantId());
-
-        try {
-            return createAzurePersistence(blobContainerClient, writeContainerClient, null, configuration, true);
-        } catch (BlobStorageException e) {
-            throw new IOException(e);
-        }
-    }
-
-    @NotNull
-    private static AzurePersistence createAzurePersistence(String connectionString, Configuration configuration, boolean createContainer) throws IOException {
-        try {
-            AzureHttpRequestLoggingPolicy azureHttpRequestLoggingPolicy = new AzureHttpRequestLoggingPolicy();
-
-            String containerName = configuration.containerName();
-            String endpoint = String.format("https://%s.blob.core.windows.net", containerName);
-
-            RetryOptions retryOptions = AzureRequestOptions.getRetryOptionsDefault();
-            BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
-                    .endpoint(endpoint)
-                    .addPolicy(azureHttpRequestLoggingPolicy)
-                    .connectionString(connectionString)
-                    .retryOptions(retryOptions)
-                    .buildClient();
-
-            BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
-
-            RetryOptions writeRetryOptions = AzureRequestOptions.getRetryOperationsOptimiseForWriteOperations();
-            BlobServiceClient writeBlobServiceClient = new BlobServiceClientBuilder()
-                    .endpoint(endpoint)
-                    .addPolicy(azureHttpRequestLoggingPolicy)
-                    .connectionString(connectionString)
-                    .retryOptions(writeRetryOptions)
-                    .buildClient();
-
-            BlobContainerClient writeBlobContainerClient = writeBlobServiceClient.getBlobContainerClient(containerName);
-
-            return createAzurePersistence(blobContainerClient, writeBlobContainerClient, azureHttpRequestLoggingPolicy, configuration, createContainer);
-        } catch (BlobStorageException e) {
-            throw new IOException(e);
-        }
-    }
-
-    @NotNull
-    private static AzurePersistence createAzurePersistence(BlobContainerClient blobContainerClient, BlobContainerClient writeBlobContainerClient, AzureHttpRequestLoggingPolicy azureHttpRequestLoggingPolicy, Configuration configuration, boolean createContainer) throws BlobStorageException {
-
-        //TODO: ierandra
-        /*if (configuration.enableSecondaryLocation()) {
-            blobRequestOptions.setLocationMode(LocationMode.PRIMARY_THEN_SECONDARY);
-        }
-        cloudBlobClient.setDefaultRequestOptions(blobRequestOptions);
-         */
-
-        if (createContainer) {
-            blobContainerClient.createIfNotExists();
-        }
-        String path = normalizePath(configuration.rootPath());
-        return new AzurePersistence(blobContainerClient, writeBlobContainerClient, path, azureHttpRequestLoggingPolicy);
-    }
-
-    @NotNull
-    private static String normalizePath(@NotNull String rootPath) {
-        if (rootPath.length() > 0 && rootPath.charAt(0) == '/') {
-            return rootPath.substring(1);
-        }
-        return rootPath;
     }
 
 }

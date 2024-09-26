@@ -62,12 +62,11 @@ public class AzureSegmentArchiveWriterTest {
 
     @Before
     public void setUp() throws Exception {
-        mockServerClient = new MockServerClient("127.0.0.1", 1080);
         System.setProperty("azure.segment.archive.writer.retries.intervalMs", "100");
         System.setProperty("azure.segment.archive.writer.retries.max", Integer.toString(MAX_ATTEMPTS));
 
         // Disable Azure SDK own retry mechanism used by AzureSegmentArchiveWriter
-        System.setProperty("segment.azure.retry.attempts", "0");
+        System.setProperty("segment.azure.retry.attempts", "1");
         System.setProperty("segment.timeout.execution", "1");
 
         readBlobContainerClient = azurite.getReadBlobContainerClient("oak-test");

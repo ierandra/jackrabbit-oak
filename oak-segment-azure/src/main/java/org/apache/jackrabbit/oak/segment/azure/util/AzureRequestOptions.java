@@ -19,10 +19,8 @@
 
 package org.apache.jackrabbit.oak.segment.azure.util;
 
-import com.azure.core.http.policy.ExponentialBackoffOptions;
-import com.azure.core.http.policy.RetryOptions;
-
-import java.time.Duration;
+import com.azure.storage.common.policy.RequestRetryOptions;
+import com.azure.storage.common.policy.RetryPolicyType;
 
 public class AzureRequestOptions {
 
@@ -45,30 +43,43 @@ public class AzureRequestOptions {
     private AzureRequestOptions() {
     }
 
-    public static RetryOptions getRetryOptionsDefault() {
+
+    public static RequestRetryOptions getRetryOptionsDefault() {
+        return getRetryOptionsDefault(null);
+    }
+
+    public static RequestRetryOptions getRetryOptionsDefault(String secondaryHost) {
         int retryAttempts = Integer.getInteger(RETRY_ATTEMPTS_PROP, DEFAULT_RETRY_ATTEMPTS);
         int timeoutExecution = Integer.getInteger(TIMEOUT_EXECUTION_PROP, DEFAULT_TIMEOUT_EXECUTION);
         int timeoutInterval = Integer.getInteger(TIMEOUT_INTERVAL_PROP, DEFAULT_TIMEOUT_INTERVAL);
+        long timeoutIntervalToMs = timeoutInterval * 1_000L;
+        long timeoutIntervalMax = timeoutIntervalToMs * 5;
 
-        ExponentialBackoffOptions exponentialBackoffOptions = new ExponentialBackoffOptions();
-        exponentialBackoffOptions.setMaxRetries(retryAttempts);
-        exponentialBackoffOptions.setMaxDelay(Duration.ofSeconds(timeoutExecution));
-        exponentialBackoffOptions.setBaseDelay(Duration.ofSeconds(timeoutInterval));
-
-        return new RetryOptions(exponentialBackoffOptions);
+        return new RequestRetryOptions(RetryPolicyType.EXPONENTIAL,
+                retryAttempts,
+                timeoutExecution,
+                timeoutIntervalToMs,
+                timeoutIntervalMax,
+                secondaryHost);
     }
 
-    public static RetryOptions getRetryOperationsOptimiseForWriteOperations() {
+    /**
+     * secondaryHost is null because there is no writer in secondary
+     * @return
+     */
+    public static RequestRetryOptions getRetryOperationsOptimiseForWriteOperations() {
         int retryAttempts = Integer.getInteger(RETRY_ATTEMPTS_PROP, DEFAULT_RETRY_ATTEMPTS);
         Integer writeTimeoutExecution = Integer.getInteger(WRITE_TIMEOUT_EXECUTION_PROP, DEFAULT_TIMEOUT_EXECUTION);
         Integer writeTimeoutInterval = Integer.getInteger(WRITE_TIMEOUT_INTERVAL_PROP, DEFAULT_TIMEOUT_INTERVAL);
+        long writeTimeoutIntervalToMs = writeTimeoutInterval * 1_000L;
+        long writeTimeoutIntervalMax = writeTimeoutIntervalToMs * 5;
 
-        ExponentialBackoffOptions exponentialBackoffOptions = new ExponentialBackoffOptions();
-        exponentialBackoffOptions.setMaxRetries(retryAttempts);
-        exponentialBackoffOptions.setMaxDelay(Duration.ofSeconds(writeTimeoutExecution));
-        exponentialBackoffOptions.setBaseDelay(Duration.ofSeconds(writeTimeoutInterval));
-
-        return new RetryOptions(exponentialBackoffOptions);
+        return new RequestRetryOptions(RetryPolicyType.EXPONENTIAL,
+                retryAttempts,
+                writeTimeoutExecution,
+                writeTimeoutIntervalToMs,
+                writeTimeoutIntervalMax,
+                null);
     }
 
 }

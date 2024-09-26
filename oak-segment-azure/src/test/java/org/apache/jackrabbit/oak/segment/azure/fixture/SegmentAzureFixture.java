@@ -19,11 +19,11 @@
 
 package org.apache.jackrabbit.oak.segment.azure.fixture;
 
-import com.azure.core.http.policy.RetryOptions;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.BlobStorageException;
+import com.azure.storage.common.policy.RequestRetryOptions;
 import org.apache.jackrabbit.guava.common.io.Files;
 import org.apache.jackrabbit.oak.fixture.NodeStoreFixture;
 import org.apache.jackrabbit.oak.segment.SegmentNodeStoreBuilders;
@@ -60,7 +60,7 @@ public class SegmentAzureFixture extends NodeStoreFixture {
 
             String endpoint = String.format("https://%s.blob.core.windows.net", containerName);
 
-            RetryOptions retryOptions = AzureRequestOptions.getRetryOptionsDefault();
+            RequestRetryOptions retryOptions = AzureRequestOptions.getRetryOptionsDefault();
             BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
                     .endpoint(endpoint)
                     .connectionString(AZURE_CONNECTION_STRING)
@@ -69,7 +69,7 @@ public class SegmentAzureFixture extends NodeStoreFixture {
 
             BlobContainerClient reaBlobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
 
-            RetryOptions writeRetryOptions = AzureRequestOptions.getRetryOperationsOptimiseForWriteOperations();
+            RequestRetryOptions writeRetryOptions = AzureRequestOptions.getRetryOperationsOptimiseForWriteOperations();
             BlobServiceClient writeBlobServiceClient = new BlobServiceClientBuilder()
                     .endpoint(endpoint)
                     .connectionString(AZURE_CONNECTION_STRING)
