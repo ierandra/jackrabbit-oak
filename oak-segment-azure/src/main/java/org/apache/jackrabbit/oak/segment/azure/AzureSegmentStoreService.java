@@ -18,7 +18,13 @@
  */
 package org.apache.jackrabbit.oak.segment.azure;
 
+import com.azure.core.http.HttpClient;
+import com.azure.core.http.HttpPipeline;
+import com.azure.core.http.HttpPipelineBuilder;
+import com.azure.core.http.policy.AddDatePolicy;
+import com.azure.core.http.policy.HttpPipelinePolicy;
 import com.azure.core.http.policy.RetryOptions;
+import com.azure.core.http.policy.RetryPolicy;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
@@ -143,7 +149,7 @@ public class AzureSegmentStoreService {
         BlobContainerClient writeContainerClient = azureBlobContainerClientManager.getBlobContainerClientFromServicePrincipals(configuration.accountName(), configuration.containerName(), configuration.clientId(), configuration.clientSecret(), configuration.tenantId());
 
         try {
-            return createAzurePersistence(blobContainerClient, writeContainerClient, configuration, true);
+            return createAzurePersistence(blobContainerClient, writeContainerClient, null, configuration, true);
         } catch (BlobStorageException e) {
             throw new IOException(e);
         }
@@ -152,12 +158,15 @@ public class AzureSegmentStoreService {
     @NotNull
     private static AzurePersistence createAzurePersistence(String connectionString, Configuration configuration, boolean createContainer) throws IOException {
         try {
+            AzureHttpRequestLoggingPolicy azureHttpRequestLoggingPolicy = new AzureHttpRequestLoggingPolicy();
+
             String containerName = configuration.containerName();
             String endpoint = String.format("https://%s.blob.core.windows.net", containerName);
 
             RetryOptions retryOptions = AzureRequestOptions.getRetryOptionsDefault();
             BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
                     .endpoint(endpoint)
+                    .addPolicy(azureHttpRequestLoggingPolicy)
                     .connectionString(connectionString)
                     .retryOptions(retryOptions)
                     .buildClient();
@@ -167,20 +176,21 @@ public class AzureSegmentStoreService {
             RetryOptions writeRetryOptions = AzureRequestOptions.getRetryOperationsOptimiseForWriteOperations();
             BlobServiceClient writeBlobServiceClient = new BlobServiceClientBuilder()
                     .endpoint(endpoint)
+                    .addPolicy(azureHttpRequestLoggingPolicy)
                     .connectionString(connectionString)
                     .retryOptions(writeRetryOptions)
                     .buildClient();
 
             BlobContainerClient writeBlobContainerClient = writeBlobServiceClient.getBlobContainerClient(containerName);
 
-            return createAzurePersistence(blobContainerClient, writeBlobContainerClient, configuration, createContainer);
+            return createAzurePersistence(blobContainerClient, writeBlobContainerClient, azureHttpRequestLoggingPolicy, configuration, createContainer);
         } catch (BlobStorageException e) {
             throw new IOException(e);
         }
     }
 
     @NotNull
-    private static AzurePersistence createAzurePersistence(BlobContainerClient blobContainerClient, BlobContainerClient writeBlobContainerClient, Configuration configuration, boolean createContainer) throws BlobStorageException {
+    private static AzurePersistence createAzurePersistence(BlobContainerClient blobContainerClient, BlobContainerClient writeBlobContainerClient, AzureHttpRequestLoggingPolicy azureHttpRequestLoggingPolicy, Configuration configuration, boolean createContainer) throws BlobStorageException {
 
         //TODO: ierandra
         /*if (configuration.enableSecondaryLocation()) {
@@ -193,7 +203,7 @@ public class AzureSegmentStoreService {
             blobContainerClient.createIfNotExists();
         }
         String path = normalizePath(configuration.rootPath());
-        return new AzurePersistence(blobContainerClient, writeBlobContainerClient, path);
+        return new AzurePersistence(blobContainerClient, writeBlobContainerClient, path, azureHttpRequestLoggingPolicy);
     }
 
     @NotNull

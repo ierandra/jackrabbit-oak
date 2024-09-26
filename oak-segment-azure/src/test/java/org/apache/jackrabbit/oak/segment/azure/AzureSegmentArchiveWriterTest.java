@@ -62,6 +62,7 @@ public class AzureSegmentArchiveWriterTest {
 
     @Before
     public void setUp() throws Exception {
+        mockServerClient = new MockServerClient("127.0.0.1", 1080);
         System.setProperty("azure.segment.archive.writer.retries.intervalMs", "100");
         System.setProperty("azure.segment.archive.writer.retries.max", Integer.toString(MAX_ATTEMPTS));
 
@@ -188,7 +189,7 @@ public class AzureSegmentArchiveWriterTest {
     private static HttpRequest getWriteBinaryReferencesRequest() {
         return request()
                 .withMethod("PUT")
-                .withPath(BASE_PATH + "/oak/data00000a.tar/data00000a.tar.brf");
+                .withPath(BASE_PATH + "/oak%2Fdata00000a.tar%2Fdata00000a.tar.brf");
     }
 
     private static HttpRequest getWriteGraphRequest() {

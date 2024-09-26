@@ -117,9 +117,11 @@ public class AzuriteDockerRule extends ExternalResource {
         String accountName = "AccountName=" + ACCOUNT_NAME;
         String accountKey = "AccountKey=" + ACCOUNT_KEY;
 
+        AzureHttpRequestLoggingTestingPolicy azureHttpRequestLoggingTestingPolicy = new AzureHttpRequestLoggingTestingPolicy();
 
         BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
                 .endpoint(getBlobEndpoint())
+                .addPolicy(azureHttpRequestLoggingTestingPolicy)
                 .connectionString(("DefaultEndpointsProtocol=http;" + ";" + accountName + ";" + accountKey + ";" + blobEndpoint))
                 .retryOptions(retryOptions)
                 .buildClient();

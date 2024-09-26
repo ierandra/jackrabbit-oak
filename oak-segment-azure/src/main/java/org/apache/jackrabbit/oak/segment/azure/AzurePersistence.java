@@ -42,11 +42,18 @@ public class AzurePersistence implements SegmentNodeStorePersistence {
 
     protected final String rootPrefix;
 
+    protected AzureHttpRequestLoggingPolicy azureHttpRequestLoggingPolicy;
+
     protected WriteAccessController writeAccessController = new WriteAccessController();
 
     public AzurePersistence(BlobContainerClient readBlobContainerClient, BlobContainerClient writeBlobContainerClient, String rootPrefix) {
+        this(readBlobContainerClient, writeBlobContainerClient, rootPrefix, null);
+    }
+
+    public AzurePersistence(BlobContainerClient readBlobContainerClient, BlobContainerClient writeBlobContainerClient, String rootPrefix, AzureHttpRequestLoggingPolicy azureHttpRequestLoggingPolicy) {
         this.readBlobContainerClient = readBlobContainerClient;
         this.writeBlobContainerClient = writeBlobContainerClient;
+        this.azureHttpRequestLoggingPolicy = azureHttpRequestLoggingPolicy;
         this.rootPrefix = rootPrefix;
     }
 
@@ -109,31 +116,8 @@ public class AzurePersistence implements SegmentNodeStorePersistence {
         }
     }
 
-    private static void attachRemoteStoreMonitor(RemoteStoreMonitor remoteStoreMonitor) {
-
-        //TODO: ierandra
-        /*OperationContext.getGlobalRequestCompletedEventHandler().addListener(new StorageEvent<RequestCompletedEvent>() {
-
-            @Override
-            public void eventOccurred(RequestCompletedEvent e) {
-                Date startDate = e.getRequestResult().getStartDate();
-                Date stopDate = e.getRequestResult().getStopDate();
-
-                if (startDate != null && stopDate != null) {
-                    long requestDuration = stopDate.getTime() - startDate.getTime();
-                    remoteStoreMonitor.requestDuration(requestDuration, TimeUnit.MILLISECONDS);
-                }
-
-                Exception exception = e.getRequestResult().getException();
-
-                if (exception == null) {
-                    remoteStoreMonitor.requestCount();
-                } else {
-                    remoteStoreMonitor.requestError();
-                }
-            }
-
-        });*/
+    private void attachRemoteStoreMonitor(RemoteStoreMonitor remoteStoreMonitor) {
+        if (azureHttpRequestLoggingPolicy != null) {azureHttpRequestLoggingPolicy.setRemoteStoreMonitor(remoteStoreMonitor);}
     }
 
     public BlobContainerClient getReadBlobContainerClient() {
