@@ -18,7 +18,7 @@ package org.apache.jackrabbit.oak.plugins.document;
 
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
-import static org.apache.jackrabbit.guava.common.base.Preconditions.checkArgument;
+import static org.apache.jackrabbit.oak.commons.conditions.Validate.checkArgument;
 import static org.apache.jackrabbit.guava.common.collect.ImmutableList.copyOf;
 import static org.apache.jackrabbit.guava.common.collect.Iterables.filter;
 import static org.apache.jackrabbit.guava.common.collect.Iterables.mergeSorted;
@@ -46,6 +46,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
@@ -54,13 +55,11 @@ import java.util.function.Predicate;
 import org.apache.jackrabbit.guava.common.collect.AbstractIterator;
 import org.apache.jackrabbit.guava.common.collect.ImmutableList;
 import org.apache.jackrabbit.guava.common.collect.Iterables;
-import org.apache.jackrabbit.guava.common.collect.Lists;
 import org.apache.jackrabbit.guava.common.collect.Maps;
 import org.apache.jackrabbit.guava.common.collect.Ordering;
-import org.apache.jackrabbit.guava.common.collect.Queues;
-import org.apache.jackrabbit.guava.common.collect.Sets;
 import org.apache.jackrabbit.oak.api.PropertyState;
 import org.apache.jackrabbit.oak.commons.PathUtils;
+import org.apache.jackrabbit.oak.commons.collections.CollectionUtils;
 import org.apache.jackrabbit.oak.commons.json.JsopBuilder;
 import org.apache.jackrabbit.oak.commons.json.JsopReader;
 import org.apache.jackrabbit.oak.commons.json.JsopTokenizer;
@@ -1007,7 +1006,7 @@ public final class NodeDocument extends Document {
             return null;
         }
         Path path = getPath();
-        List<PropertyState> props = Lists.newArrayList();
+        List<PropertyState> props = new ArrayList<>();
         for (String key : keySet()) {
             if (!Utils.isPropertyName(key)) {
                 continue;
@@ -1386,7 +1385,7 @@ public final class NodeDocument extends Document {
         //on property that all prevDoc id would starts <depth+2>:p/path/to/node
         return new AbstractIterator<NodeDocument>(){
             private Queue<Map.Entry<Revision, Range>> previousRanges =
-                    Queues.newArrayDeque(getPreviousRanges().entrySet());
+                    CollectionUtils.toArrayDeque(getPreviousRanges().entrySet());
             @Override
             protected NodeDocument computeNext() {
                 if(!previousRanges.isEmpty()){
@@ -1417,7 +1416,7 @@ public final class NodeDocument extends Document {
             return Collections.emptyIterator();
         }
         // create a mutable copy
-        final NavigableMap<Revision, Range> ranges = Maps.newTreeMap(getPreviousRanges());
+        final NavigableMap<Revision, Range> ranges = new TreeMap<>(getPreviousRanges());
         return new AbstractIterator<NodeDocument>() {
             @Override
             protected NodeDocument computeNext() {
@@ -1526,7 +1525,7 @@ public final class NodeDocument extends Document {
     Iterable<Revision> getChanges(@NotNull final String property,
                                   @NotNull final RevisionVector min) {
         Predicate<Revision> p = input -> min.isRevisionNewer(input);
-        List<Iterable<Revision>> changes = Lists.newArrayList();
+        List<Iterable<Revision>> changes = new ArrayList<>();
         changes.add(abortingIterable(getLocalMap(property).keySet(), p));
         for (Map.Entry<Revision, Range> e : getPreviousRanges().entrySet()) {
             if (min.isRevisionNewer(e.getKey())) {
@@ -1557,7 +1556,7 @@ public final class NodeDocument extends Document {
     Iterable<Map.Entry<Revision, String>> getVisibleChanges(@NotNull final String property,
                                                             @NotNull final RevisionVector readRevision) {
         Predicate<Map.Entry<Revision, String>> p = input -> !readRevision.isRevisionNewer(input.getKey());
-        List<Iterable<Map.Entry<Revision, String>>> changes = Lists.newArrayList();
+        List<Iterable<Map.Entry<Revision, String>>> changes = new ArrayList<>();
         Map<Revision, String> localChanges = getLocalMap(property);
         if (!localChanges.isEmpty()) {
             changes.add(filter(localChanges.entrySet(), p::test));
@@ -1588,7 +1587,7 @@ public final class NodeDocument extends Document {
     private void collectVisiblePreviousChanges(@NotNull final String property,
                                                @NotNull final Revision readRevision,
                                                @NotNull final List<Iterable<Entry<Revision, String>>> changes) {
-        List<Iterable<Map.Entry<Revision, String>>> revs = Lists.newArrayList();
+        List<Iterable<Map.Entry<Revision, String>>> revs = new ArrayList<>();
 
         RevisionVector readRV = new RevisionVector(readRevision);
         List<Range> ranges = new ArrayList<>();
@@ -1975,7 +1974,7 @@ public final class NodeDocument extends Document {
         // overlay with unsaved last modified from this instance
         lastRevs.update(pendingLastRev);
         // collect clusterIds
-        SortedSet<Revision> mostRecentChanges = Sets.newTreeSet(REVERSE);
+        SortedSet<Revision> mostRecentChanges = new TreeSet<>(REVERSE);
         mostRecentChanges.addAll(getLocalRevisions().keySet());
         mostRecentChanges.addAll(getLocalCommitRoot().keySet());
         Set<Integer> clusterIds = new HashSet<>();

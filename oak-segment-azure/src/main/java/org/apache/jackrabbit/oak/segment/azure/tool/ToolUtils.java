@@ -18,7 +18,6 @@
  */
 package org.apache.jackrabbit.oak.segment.azure.tool;
 
-import static org.apache.jackrabbit.guava.common.collect.Lists.newArrayList;
 import static org.apache.jackrabbit.oak.segment.azure.util.AzureConfigurationParserUtils.KEY_ACCOUNT_NAME;
 import static org.apache.jackrabbit.oak.segment.azure.util.AzureConfigurationParserUtils.KEY_DIR;
 import static org.apache.jackrabbit.oak.segment.azure.util.AzureConfigurationParserUtils.KEY_SHARED_ACCESS_SIGNATURE;
@@ -31,6 +30,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URISyntaxException;
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +38,7 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.jackrabbit.oak.commons.Buffer;
+import org.apache.jackrabbit.oak.commons.collections.CollectionUtils;
 import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
 import org.apache.jackrabbit.oak.segment.azure.v8.AzureStorageCredentialManagerV8;
 import org.apache.jackrabbit.oak.segment.azure.v8.AzureUtilitiesV8;
@@ -196,7 +197,7 @@ public class ToolUtils {
                 try (JournalReader journalReader = new JournalReader(journal)) {
                     Iterator<String> revisionIterator = Iterators.transform(journalReader,
                          entry -> entry.getRevision());
-                    return newArrayList(revisionIterator);
+                    return CollectionUtils.toList(revisionIterator);
                 } catch (Exception e) {
                     log.error("Error while reading from journal file");
                     e.printStackTrace();
@@ -204,7 +205,7 @@ public class ToolUtils {
             }
         }
 
-        return newArrayList();
+        return new ArrayList<>();
     }
 
     public static SegmentStoreType storeTypeFromPathOrUri(String pathOrUri) {

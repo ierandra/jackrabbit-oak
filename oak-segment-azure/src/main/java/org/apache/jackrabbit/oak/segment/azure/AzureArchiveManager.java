@@ -51,7 +51,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static com.azure.storage.blob.models.BlobType.BLOCK_BLOB;
-import static org.apache.jackrabbit.guava.common.base.Preconditions.checkArgument;
+import static org.apache.jackrabbit.oak.commons.conditions.Validate.checkArgument;
 import static org.apache.jackrabbit.oak.segment.azure.AzureUtilities.getName;
 
 public class AzureArchiveManager implements SegmentArchiveManager {
@@ -90,7 +90,6 @@ public class AzureArchiveManager implements SegmentArchiveManager {
                     .map(Path::toString)
                     .collect(Collectors.toList());
 
-
             Iterator<String> it = archiveNames.iterator();
             while (it.hasNext()) {
                 String archiveName = it.next();
@@ -107,7 +106,6 @@ public class AzureArchiveManager implements SegmentArchiveManager {
 
     /**
      * Check if there's a valid 0000. segment in the archive
-     *
      * @param archiveName
      * @return true if the archive is empty (no 0000.* segment)
      */
