@@ -186,7 +186,6 @@ public class AzureArchiveManager implements SegmentArchiveManager {
         getBlobs(from)
                 .forEach(blobItem -> {
                     try {
-                        log.info("Backup segment: {}", blobItem.getName());
                         copyBlob(blobItem, targetDirectory);
                     } catch (IOException e) {
                         log.error("Can't copy segment {}", blobItem.getName(), e);
