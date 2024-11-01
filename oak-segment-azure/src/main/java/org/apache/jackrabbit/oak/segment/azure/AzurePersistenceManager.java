@@ -29,10 +29,11 @@ public class AzurePersistenceManager {
         final String clientId = environment.getVariable(AZURE_CLIENT_ID);
         final String clientSecret = environment.getVariable(AZURE_CLIENT_SECRET);
         final String tenantId = environment.getVariable(AZURE_TENANT_ID);
+        final String rootPrefixNormalized = normalizePath(rootPrefix);
 
         if (StringUtils.isNoneBlank(clientId, clientSecret, tenantId)) {
             try {
-                return createPersistenceFromServicePrincipalCredentials(accountName, containerName, rootPrefix, clientId, clientSecret, tenantId, false, false);
+                return createPersistenceFromServicePrincipalCredentials(accountName, containerName, rootPrefixNormalized, clientId, clientSecret, tenantId, false, false);
             } catch (IllegalArgumentException | StringIndexOutOfBoundsException e) {
                 log.error("Error occurred while connecting to Azure Storage using service principals: ", e);
                 throw new IllegalArgumentException(
@@ -44,7 +45,7 @@ public class AzurePersistenceManager {
 
         String key = environment.getVariable(AZURE_SECRET_KEY);
         try {
-            return createPersistenceFromAccessKey(accountName, containerName, key, null, rootPrefix, false, false);
+            return createPersistenceFromAccessKey(accountName, containerName, key, null, rootPrefixNormalized, false, false);
         } catch (IllegalArgumentException | StringIndexOutOfBoundsException e) {
             log.error("Error occurred while connecting to Azure Storage using secret key: ", e);
             throw new IllegalArgumentException(
@@ -66,7 +67,8 @@ public class AzurePersistenceManager {
     }
 
     private static AzurePersistence createPersistenceFromAccessKey(Configuration configuration) throws IOException {
-        return createPersistenceFromAccessKey(configuration.accountName(), configuration.containerName(), configuration.accessKey(), configuration.blobEndpoint(), configuration.rootPath(), configuration.enableSecondaryLocation(), true);
+        final String rootPrefix = normalizePath(configuration.rootPath());
+        return createPersistenceFromAccessKey(configuration.accountName(), configuration.containerName(), configuration.accessKey(), configuration.blobEndpoint(), rootPrefix, configuration.enableSecondaryLocation(), true);
     }
 
     private static AzurePersistence createPersistenceFromAccessKey(String accountName, String containerName, String accessKey, String blobEndpoint, String rootPrefix, boolean enableSecondaryLocation, boolean createContainer) throws IOException {
@@ -99,8 +101,8 @@ public class AzurePersistenceManager {
 
     @NotNull
     private static AzurePersistence createPersistenceFromServicePrincipalCredentials(Configuration configuration) throws IOException {
-        String path = normalizePath(configuration.rootPath());
-        return createPersistenceFromServicePrincipalCredentials(configuration.accountName(), configuration.containerName(), path, configuration.clientId(), configuration.clientSecret(), configuration.tenantId(), configuration.enableSecondaryLocation(), true);
+        String rootPrefix = normalizePath(configuration.rootPath());
+        return createPersistenceFromServicePrincipalCredentials(configuration.accountName(), configuration.containerName(), rootPrefix, configuration.clientId(), configuration.clientSecret(), configuration.tenantId(), configuration.enableSecondaryLocation(), true);
     }
 
     private static AzurePersistence createPersistenceFromServicePrincipalCredentials(String accountName, String containerName, String rootPrefix, String clientId, String clientSecret, String tenantId, boolean enableSecondaryLocation, boolean createContainer) throws IOException {
@@ -127,8 +129,8 @@ public class AzurePersistenceManager {
 
     @NotNull
     private static AzurePersistence createAzurePersistence(String connectionString, Configuration configuration, boolean createContainer) throws IOException {
-        String path = normalizePath(configuration.rootPath());
-        return createAzurePersistence(connectionString, configuration.accountName(), configuration.containerName(), path, configuration.enableSecondaryLocation(), createContainer);
+        String rootPrefix = normalizePath(configuration.rootPath());
+        return createAzurePersistence(connectionString, configuration.accountName(), configuration.containerName(), rootPrefix, configuration.enableSecondaryLocation(), createContainer);
     }
 
     @NotNull
