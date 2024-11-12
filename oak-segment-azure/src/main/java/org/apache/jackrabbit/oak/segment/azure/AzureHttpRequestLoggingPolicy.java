@@ -40,9 +40,7 @@ public class AzureHttpRequestLoggingPolicy implements HttpPipelinePolicy {
             }
 
             if (verboseEnabled) {
-                log.info("HTTP Request: {} {}", context.getHttpRequest().getHttpMethod(), context.getHttpRequest().getUrl());
-                log.info("Status code is: {}", httpResponse.getStatusCode());
-                log.info("Response time: {}ms", (stopwatch.elapsed(TimeUnit.NANOSECONDS))/1_000_000);
+                log.info("HTTP Request: {} {} {} {}ms", context.getHttpRequest().getHttpMethod(), context.getHttpRequest().getUrl(), httpResponse.getStatusCode(), (stopwatch.elapsed(TimeUnit.NANOSECONDS))/1_000_000);
             }
 
             return Mono.just(httpResponse);
