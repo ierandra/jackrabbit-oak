@@ -30,9 +30,6 @@ import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.jackrabbit.oak.segment.azure.Configuration;
 import org.jetbrains.annotations.NotNull;
-import org.osgi.framework.ServiceRegistration;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.ConfigurationPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,21 +37,12 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.InvalidKeyException;
 
-@Component(
-    configurationPolicy = ConfigurationPolicy.REQUIRE,
-    configurationPid = {Configuration.PID})
-public class AzureSegmentStoreServiceV8 {
+public class AzureSegmentStoreV8 {
 
-    private static final Logger log = LoggerFactory.getLogger(AzureSegmentStoreServiceV8.class);
+    private static final Logger log = LoggerFactory.getLogger(AzureSegmentStoreV8.class);
 
-    public static final String DEFAULT_CONTAINER_NAME = "oak";
-
-    public static final String DEFAULT_ROOT_PATH = "/oak";
-
-    public static final boolean DEFAULT_ENABLE_SECONDARY_LOCATION = false;
     public static final String DEFAULT_ENDPOINT_SUFFIX = "core.windows.net";
 
-    private ServiceRegistration registration;
     private static AzureStorageCredentialManagerV8 azureStorageCredentialManagerV8;
 
     public static AzurePersistenceV8 createAzurePersistenceFrom(Configuration configuration) throws IOException {

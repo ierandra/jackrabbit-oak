@@ -19,7 +19,7 @@
 package org.apache.jackrabbit.oak.segment.azure;
 
 import org.apache.jackrabbit.oak.segment.azure.v8.AzurePersistenceV8;
-import org.apache.jackrabbit.oak.segment.azure.v8.AzureSegmentStoreServiceV8;
+import org.apache.jackrabbit.oak.segment.azure.v8.AzureSegmentStoreV8;
 import org.apache.jackrabbit.oak.segment.spi.persistence.SegmentNodeStorePersistence;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.component.ComponentContext;
@@ -57,7 +57,7 @@ public class AzureSegmentStoreService {
     @Activate
     public void activate(ComponentContext context, Configuration config) throws IOException {
         if (useAzureSdkV12) {
-            log.info("Starting nodestore using Azure SDK 12");
+            log.info("Starting node store using Azure SDK 12");
             AzurePersistence persistence = AzurePersistenceManager.createAzurePersistenceFrom(config);
             registration = context.getBundleContext()
                     .registerService(SegmentNodeStorePersistence.class, persistence, new Hashtable<String, Object>() {{
@@ -67,8 +67,8 @@ public class AzureSegmentStoreService {
                         }
                     }});
         } else {
-            log.info("Starting nodestore using Azure SDK 8");
-            AzurePersistenceV8 persistence = AzureSegmentStoreServiceV8.createAzurePersistenceFrom(config);
+            log.info("Starting node store using Azure SDK 8");
+            AzurePersistenceV8 persistence = AzureSegmentStoreV8.createAzurePersistenceFrom(config);
             registration = context.getBundleContext()
                     .registerService(SegmentNodeStorePersistence.class, persistence, new Hashtable<String, Object>() {{
                         put(SERVICE_PID, String.format("%s(%s, %s)", AzurePersistenceV8.class.getName(), config.accountName(), config.rootPath()));

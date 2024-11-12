@@ -59,7 +59,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeNotNull;
 
-public class AzureSegmentStoreServiceV8Test {
+public class AzureSegmentStoreV8Test {
     private static final Environment ENVIRONMENT = new Environment();
 
     @ClassRule
