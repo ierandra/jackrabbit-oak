@@ -55,7 +55,7 @@ public class AzureSegmentArchiveWriterTest {
     public static final int MAX_ATTEMPTS = 3;
 
     @Rule
-    public MockServerRule mockServerRule = new MockServerRule(this, 1090);
+    public MockServerRule mockServerRule = new MockServerRule(this);
 
     @SuppressWarnings("unused")
     private MockServerClient mockServerClient;
@@ -70,7 +70,7 @@ public class AzureSegmentArchiveWriterTest {
         System.setProperty("azure.segment.archive.writer.retries.max", Integer.toString(MAX_ATTEMPTS));
 
         // Disable Azure SDK own retry mechanism used by AzureSegmentArchiveWriter
-        System.setProperty("segment.azure.retry.backoff", "1");
+        System.setProperty("segment.azure.retry.attempts", "1");
         System.setProperty("segment.timeout.execution", "1");
     }
 
