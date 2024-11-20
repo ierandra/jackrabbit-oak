@@ -18,7 +18,6 @@
  */
 package org.apache.jackrabbit.oak.segment;
 
-import static org.apache.jackrabbit.guava.common.collect.Lists.newArrayList;
 import static java.util.Collections.nCopies;
 
 import java.lang.ref.WeakReference;

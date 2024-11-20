@@ -19,7 +19,6 @@
 package org.apache.jackrabbit.oak.index.indexer.document.flatfile.linkedList;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.jackrabbit.guava.common.base.Preconditions;
 import org.apache.jackrabbit.oak.commons.IOUtils;
 import org.apache.jackrabbit.oak.commons.conditions.Validate;
 import org.apache.jackrabbit.oak.index.indexer.document.NodeStateEntry;

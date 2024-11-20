@@ -16,10 +16,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.apache.jackrabbit.oak.index.indexer.document.flatfile.linkedList;
 
-import org.apache.jackrabbit.guava.common.base.Preconditions;
 import org.apache.jackrabbit.oak.commons.conditions.Validate;
 import org.apache.jackrabbit.oak.index.indexer.document.NodeStateEntry;
 import org.jetbrains.annotations.NotNull;

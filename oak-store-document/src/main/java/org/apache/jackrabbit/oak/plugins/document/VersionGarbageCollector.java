@@ -47,7 +47,6 @@ import org.apache.jackrabbit.guava.common.base.Joiner;
 import org.apache.jackrabbit.guava.common.base.Stopwatch;
 
 import org.apache.jackrabbit.guava.common.collect.Iterators;
-import org.apache.jackrabbit.guava.common.collect.Lists;
 import org.apache.jackrabbit.guava.common.collect.Maps;
 
 import org.apache.jackrabbit.oak.commons.sort.StringSort;
@@ -772,7 +771,7 @@ public class VersionGarbageCollector {
             this.options = options;
             GCMessageTracker vgcm = new GCMessageTracker();
             this.status = vgcm;
-            this.monitor = new DelegatingGCMonitor(Lists.newArrayList(vgcm, gcMonitor));
+            this.monitor = new DelegatingGCMonitor(List.of(vgcm, gcMonitor));
             this.monitor.updateStatus(STATUS_INITIALIZING);
         }
 
@@ -938,9 +937,9 @@ public class VersionGarbageCollector {
                                 final Long modified = lastDoc.getModified();
                                 if (modified == null) {
                                     monitor.warn("collectFullGC : document has no _modified property : {}", doc.getId());
-                                } else if (SECONDS.toMillis(modified) < fromModifiedMs) {
-                                    monitor.warn("collectFullGC : document has older _modified than query boundary : {} (from: {}, to: {})",
-                                            modified, timestampToString(fromModifiedMs), timestampToString(toModifiedMs));
+                                } else if (modified < MILLISECONDS.toSeconds(fromModifiedMs)) {
+                                    monitor.warn("collectFullGC : document has older _modified than query boundary : {} (from: {} [{}], to: {} [{}])",
+                                            modified, fromModifiedMs, timestampToString(fromModifiedMs), toModifiedMs, timestampToString(toModifiedMs));
                                 }
                             }
                             // now remove the garbage in one go, if any

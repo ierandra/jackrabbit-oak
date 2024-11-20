@@ -120,6 +120,37 @@ public class CollectionUtilsTest {
     }
 
     @Test
+    public void concurrentHashSet() {
+        // create a set of non-null values
+        final Set<String> s = data.stream().filter(Objects::nonNull).collect(Collectors.toSet());
+
+        Set<String> concurrentHashSet = CollectionUtils.newConcurrentHashSet();
+        concurrentHashSet.addAll(s);
+
+        Assert.assertEquals(s, concurrentHashSet);
+    }
+
+    @Test
+    public void concurrentHashSetWithIterable() {
+        // create a set of non-null values
+        final Iterable<String> elements = data.stream().filter(Objects::nonNull).collect(Collectors.toSet());
+
+        Set<String> concurrentHashSet = CollectionUtils.newConcurrentHashSet(elements);
+
+        Assert.assertEquals(elements, concurrentHashSet);
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void concurrentHashSetWithIterableWithNulls() {
+        // create a set of null values
+        final Iterable<String> elements = new HashSet<>(data);
+
+        CollectionUtils.newConcurrentHashSet(elements);
+
+        fail("Should throw NullPointerException");
+    }
+
+    @Test
     public void toArrayDequeWithNonEmptyIterable() {
         List<String> list = Arrays.asList("one", "two", "three");
         ArrayDeque<String> result = CollectionUtils.toArrayDeque(list);

@@ -18,8 +18,6 @@
  */
 package org.apache.jackrabbit.oak.query.ast;
 
-import static org.apache.jackrabbit.guava.common.collect.Lists.newArrayList;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;

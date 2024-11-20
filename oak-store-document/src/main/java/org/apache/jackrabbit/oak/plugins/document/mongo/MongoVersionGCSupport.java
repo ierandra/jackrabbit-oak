@@ -35,6 +35,7 @@ import static java.util.Collections.emptyList;
 import static org.apache.jackrabbit.oak.plugins.document.Collection.NODES;
 import static org.apache.jackrabbit.oak.plugins.document.Document.ID;
 import static org.apache.jackrabbit.oak.plugins.document.NodeDocument.DELETED_ONCE;
+import static org.apache.jackrabbit.oak.plugins.document.NodeDocument.MIN_ID_VALUE;
 import static org.apache.jackrabbit.oak.plugins.document.NodeDocument.MODIFIED_IN_SECS;
 import static org.apache.jackrabbit.oak.plugins.document.NodeDocument.PATH;
 import static org.apache.jackrabbit.oak.plugins.document.NodeDocument.SD_MAX_REV_TIME_IN_SECS;
@@ -52,6 +53,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
+import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCursor;
 
 import org.apache.jackrabbit.oak.commons.json.JsopBuilder;
@@ -67,6 +69,7 @@ import org.apache.jackrabbit.oak.plugins.document.VersionGarbageCollector.Versio
 import org.apache.jackrabbit.oak.plugins.document.util.CloseableIterable;
 import org.apache.jackrabbit.oak.plugins.document.util.Utils;
 import org.apache.jackrabbit.oak.stats.Clock;
+import org.bson.BsonDocument;
 import org.bson.conversions.Bson;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -243,24 +246,40 @@ public class MongoVersionGCSupport extends VersionGCSupport {
      * @param fromModified the lower bound modified timestamp in millis (inclusive)
      * @param toModified   the upper bound modified timestamp in millis (exclusive)
      * @param limit        the limit of documents to return
-     * @param fromId       the lower bound {@link NodeDocument#ID}
+     * @param fromId       the lower bound {@link NodeDocument#ID} (exclusive)
      * @return matching documents.
      */
     @Override
     public Iterable<NodeDocument> getModifiedDocs(final long fromModified, final long toModified, final int limit,
                                                   @NotNull final String fromId, @NotNull Set<String> includedPathPrefixes,
                                                   @NotNull Set<String> excludedPathPrefixes) {
+        LOG.info("getModifiedDocs fromModified: {}, toModified: {}, limit: {}, fromId: {}, includedPathPrefixes: {}, excludedPathPrefixes: {}",
+                fromModified, toModified, limit, fromId, includedPathPrefixes, excludedPathPrefixes);
+
+        final long fromModifiedQuery;
+        if (MIN_ID_VALUE.equals(fromId)) {
+            // If fromId is MIN_ID_VALUE, round fromModified to 5 second resolution
+            fromModifiedQuery = getModifiedInSecs(fromModified);
+        } else {
+            // If fromId is not MIN_ID_VALUE, don't round fromModified to 5 second resolution
+            fromModifiedQuery = TimeUnit.MILLISECONDS.toSeconds(fromModified);
+        }
+
         // (_modified = fromModified && _id > fromId || _modified > fromModified && _modified < toModified)
         final Bson query = or(
                 withIncludeExcludes(includedPathPrefixes, excludedPathPrefixes,
-                        and(eq(MODIFIED_IN_SECS, getModifiedInSecs(fromModified)), gt(ID, fromId))),
+                        and(eq(MODIFIED_IN_SECS, fromModifiedQuery), gt(ID, fromId))),
                 withIncludeExcludes(includedPathPrefixes, excludedPathPrefixes,
-                        and(gt(MODIFIED_IN_SECS, getModifiedInSecs(fromModified)), lt(MODIFIED_IN_SECS, getModifiedInSecs(toModified)))));
+                        and(gt(MODIFIED_IN_SECS, fromModifiedQuery), lt(MODIFIED_IN_SECS, getModifiedInSecs(toModified)))));
 
         // first sort by _modified and then by _id
         final Bson sort = ascending(MODIFIED_IN_SECS, ID);
 
         logQueryExplain("fullGC query explain details, hint : {} - explain : {}", query, modifiedIdHint);
+        if (LOG.isDebugEnabled()) {
+            BsonDocument bson = query.toBsonDocument(BsonDocument.class, MongoClient.getDefaultCodecRegistry());
+            LOG.debug("getModifiedDocs : query is {}", bson);
+        }
 
         final FindIterable<BasicDBObject> cursor = getNodeCollection()
                 .find(query)

@@ -18,7 +18,6 @@ package org.apache.jackrabbit.oak.plugins.index.lucene;
 
 import static org.apache.jackrabbit.guava.common.collect.ImmutableList.copyOf;
 import static org.apache.jackrabbit.guava.common.collect.Iterators.transform;
-import static org.apache.jackrabbit.guava.common.collect.Lists.newArrayList;
 import static org.apache.jackrabbit.guava.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static java.util.Arrays.asList;
 import static javax.jcr.PropertyType.TYPENAME_STRING;
@@ -118,7 +117,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.jackrabbit.guava.common.collect.ImmutableList;
-import org.apache.jackrabbit.guava.common.collect.Lists;
 
 @SuppressWarnings("ConstantConditions")
 public class LuceneIndexTest {

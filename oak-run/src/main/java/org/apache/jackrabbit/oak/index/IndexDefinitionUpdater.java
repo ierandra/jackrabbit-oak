@@ -16,7 +16,6 @@
  */
 package org.apache.jackrabbit.oak.index;
 
-import org.apache.jackrabbit.guava.common.base.Preconditions;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import org.apache.commons.io.FileUtils;

@@ -18,8 +18,6 @@
  */
 package org.apache.jackrabbit.oak.jcr.observation;
 
-import static org.apache.jackrabbit.guava.common.collect.Lists.newArrayList;
-
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.jackrabbit.oak.commons.PathUtils.concat;
 import static org.apache.jackrabbit.oak.commons.PathUtils.elements;

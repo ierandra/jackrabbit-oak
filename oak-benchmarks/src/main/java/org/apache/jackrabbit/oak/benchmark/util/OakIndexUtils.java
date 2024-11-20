@@ -16,7 +16,6 @@
  */
 package org.apache.jackrabbit.oak.benchmark.util;
 
-import org.apache.jackrabbit.guava.common.base.Strings;
 import org.apache.jackrabbit.JcrConstants;
 import org.apache.jackrabbit.commons.JcrUtils;
 import org.apache.jackrabbit.oak.plugins.index.IndexConstants;

@@ -146,6 +146,9 @@ import org.slf4j.LoggerFactory;
 @RunWith(Parameterized.class)
 public class VersionGarbageCollectorIT {
 
+    // OAK-10845 : temporary hacky exposure of test store to include its dump in error message
+    static DocumentNodeStore staticStore;
+
     @Rule
     public TestName name = new TestName();
 
@@ -314,6 +317,13 @@ public class VersionGarbageCollectorIT {
                 .setLeaseCheckMode(LeaseCheckMode.DISABLED)
                 .setDocumentStore(ds1).setAsyncDelay(0);
         store1 = documentMKBuilder.getNodeStore();
+        // OAK-11254 : adding a temporary sleep to reduce likelyhood of
+        // backgroundPurge to interfere with test
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            fail("got interrupted");
+        }
     }
 
     private void createSecondaryStore(LeaseCheckMode leaseCheckNode)
@@ -344,6 +354,13 @@ public class VersionGarbageCollectorIT {
         // custom fullGcMode needs to be set after each node store creation, since the VersionGarbageCollector
         // constructor sets the fullGcMode to the value read from OSGI Configuration - method setFullGcMode
         writeStaticField(VersionGarbageCollector.class, "fullGcMode", fullGcMode, true);
+        // OAK-11254 : adding a temporary sleep to reduce likelyhood of
+        // backgroundPurge to interfere with test
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            fail("got interrupted");
+        }
     }
 
     private static final Set<Thread> tbefore = new HashSet<>();
@@ -985,6 +1002,13 @@ public class VersionGarbageCollectorIT {
         };
         store1 = new DocumentMK.Builder().clock(clock).setLeaseCheckMode(LeaseCheckMode.DISABLED)
                 .setDocumentStore(fds).setAsyncDelay(0).getNodeStore();
+        // OAK-11254 : adding a temporary sleep to reduce likelyhood of
+        // backgroundPurge to interfere with test
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            fail("got interrupted");
+        }
 
         assertTrue(store1.getDocumentStore() instanceof FailingDocumentStore);
 
@@ -1029,6 +1053,13 @@ public class VersionGarbageCollectorIT {
         store1 = new DocumentMK.Builder().clock(clock).setLeaseCheckMode(LeaseCheckMode.DISABLED)
                 .setDocumentStore(fds).setAsyncDelay(0)
                 .getNodeStore();
+        // OAK-11254 : adding a temporary sleep to reduce likelyhood of
+        // backgroundPurge to interfere with test
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            fail("got interrupted");
+        }
         assertTrue(store1.getDocumentStore() instanceof FailingDocumentStore);
         MongoTestUtils.setReadPreference(store1, ReadPreference.primary());
         gc = store1.getVersionGarbageCollector();
@@ -1510,13 +1541,24 @@ public class VersionGarbageCollectorIT {
         }
         assertNotNull(stats);
         assertNotNull(c);
-        assertEquals(c.mode + "/docGC", c.deletedDocGCCount, stats.deletedDocGCCount);
-        assertEquals(c.mode + "/props", c.deletedPropsCount, stats.deletedPropsCount);
-        assertEquals(c.mode + "/internalProps", c.deletedInternalPropsCount, stats.deletedInternalPropsCount);
-        assertEquals(c.mode + "/propRevs", c.deletedPropRevsCount, stats.deletedPropRevsCount);
-        assertEquals(c.mode + "/internalPropRevs", c.deletedInternalPropRevsCount, stats.deletedInternalPropRevsCount);
-        assertEquals(c.mode + "/unmergedBC", c.deletedUnmergedBCCount, stats.deletedUnmergedBCCount);
-        assertEquals(c.mode + "/updatedFullGCDocsCount", c.updatedFullGCDocsCount, stats.updatedFullGCDocsCount);
+        doAssertEquals(c.mode + "/docGC", c.deletedDocGCCount, stats.deletedDocGCCount);
+        doAssertEquals(c.mode + "/props", c.deletedPropsCount, stats.deletedPropsCount);
+        doAssertEquals(c.mode + "/internalProps", c.deletedInternalPropsCount, stats.deletedInternalPropsCount);
+        doAssertEquals(c.mode + "/propRevs", c.deletedPropRevsCount, stats.deletedPropRevsCount);
+        doAssertEquals(c.mode + "/internalPropRevs", c.deletedInternalPropRevsCount, stats.deletedInternalPropRevsCount);
+        doAssertEquals(c.mode + "/unmergedBC", c.deletedUnmergedBCCount, stats.deletedUnmergedBCCount);
+        doAssertEquals(c.mode + "/updatedFullGCDocsCount", c.updatedFullGCDocsCount, stats.updatedFullGCDocsCount);
+    }
+
+    private static void doAssertEquals(String msg, long expected, long actual) {
+        if (expected != actual) {
+            // then let's expand the error message with a dump of the store
+            // to help debug flaky tests
+            if (staticStore != null) {
+                msg = msg + " - staticStore : " + staticStore.getDocumentStore();
+            }
+        }
+        assertEquals(msg, expected, actual);
     }
 
     @Test
@@ -3549,7 +3591,7 @@ public class VersionGarbageCollectorIT {
         UpdateOp op = new UpdateOp(id, true);
         NodeDocument.setDeletedOnce(op);
         NodeDocument.setModified(op, store1.newRevision());
-        store1.getDocumentStore().create(NODES, Lists.newArrayList(op));
+        store1.getDocumentStore().create(NODES, List.of(op));
 
         clock.waitUntil(clock.getTime() + HOURS.toMillis(maxAge) + delta);
 

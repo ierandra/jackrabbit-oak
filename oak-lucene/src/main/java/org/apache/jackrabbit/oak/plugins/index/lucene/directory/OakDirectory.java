@@ -20,16 +20,16 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.jackrabbit.guava.common.collect.ImmutableSet;
-import org.apache.jackrabbit.guava.common.collect.Lists;
-import org.apache.jackrabbit.guava.common.collect.Sets;
 import org.apache.jackrabbit.oak.api.Blob;
 import org.apache.jackrabbit.oak.api.PropertyState;
 import org.apache.jackrabbit.oak.api.Type;
 import org.apache.jackrabbit.oak.commons.PerfLogger;
 import org.apache.jackrabbit.oak.commons.StringUtils;
+import org.apache.jackrabbit.oak.commons.collections.CollectionUtils;
 import org.apache.jackrabbit.oak.plugins.blob.datastore.InMemoryDataRecord;
 import org.apache.jackrabbit.oak.plugins.index.lucene.LuceneIndexDefinition;
 import org.apache.jackrabbit.oak.plugins.index.lucene.directory.ActiveDeletedBlobCollectorFactory.BlobDeletionCallback;
@@ -80,7 +80,7 @@ public class OakDirectory extends Directory {
     private LockFactory lockFactory;
     private final boolean readOnly;
     private final boolean streamingWriteEnabled;
-    private final Set<String> fileNames = Sets.newConcurrentHashSet();
+    private final Set<String> fileNames = CollectionUtils.newConcurrentHashSet();
     private final Set<String> fileNamesAtStart;
     private final String indexName;
     private final BlobFactory blobFactory;
@@ -167,7 +167,7 @@ public class OakDirectory extends Directory {
                         // OAK-7066: Also, make sure that we have at least some non-inlined chunks to delete
                         if (blobId != null && !InMemoryDataRecord.isInstance(blobId)) {
                             blobDeletionCallback.deleted(blobId,
-                                    Lists.newArrayList(definition.getIndexPath(), dataNodeName, name));
+                                    List.of(definition.getIndexPath(), dataNodeName, name));
                         }
                     }
                 }

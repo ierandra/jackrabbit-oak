@@ -26,6 +26,7 @@ import org.apache.jackrabbit.guava.common.collect.Maps;
 import com.mongodb.MongoClient;
 
 import org.apache.commons.io.FilenameUtils;
+import org.apache.jackrabbit.oak.commons.PerfLogger;
 import org.apache.jackrabbit.oak.plugins.document.mongo.MongoDocumentStore;
 import org.apache.jackrabbit.oak.plugins.document.mongo.MongoDocumentStoreTestHelper;
 import org.apache.jackrabbit.oak.plugins.document.spi.JournalPropertyService;
@@ -364,6 +365,27 @@ public class DocumentNodeStoreServiceTest {
 
         DocumentNodeStore dns = context.getService(DocumentNodeStore.class);
         assertEquals(recoveryDelayMillis, ClusterNodeInfo.getRecoveryDelayMillis());
+    }
+
+    @Test
+    public void testPerfLoggerInfoMillis() {
+        Map<String, Object> config = newConfig(repoHome);
+        config.put("perfLoggerInfoMillis", 100);
+        MockOsgi.setConfigForPid(context.bundleContext(), PID, config);
+        MockOsgi.activate(service, context.bundleContext());
+
+        DocumentNodeStore dns = context.getService(DocumentNodeStore.class);
+        try {
+            Field perfLoggerField = dns.getClass().getDeclaredField("PERFLOG");
+            perfLoggerField.setAccessible(true);
+            PerfLogger perfLogger = (PerfLogger) perfLoggerField.get(dns);
+            Field infoLogMillisField = perfLogger.getClass().getDeclaredField("infoLogMillis");
+            infoLogMillisField.setAccessible(true);
+            long infoLogMillis = infoLogMillisField.getLong(perfLogger);
+            assertEquals(100, infoLogMillis);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            fail("Failed to access infoLogMillis field: " + e.getMessage());
+        }
     }
 
     @NotNull
