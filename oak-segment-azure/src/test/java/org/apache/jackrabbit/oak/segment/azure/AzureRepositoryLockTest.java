@@ -57,11 +57,13 @@ public class AzureRepositoryLockTest {
     @ClassRule
     public static AzuriteDockerRule azurite = new AzuriteDockerRule();
 
-    private BlobContainerClient container;
+    private BlobContainerClient noRetryBlobContainerClient;
+    private BlobContainerClient readBlobContainerClient;
 
     @Before
     public void setup() throws BlobStorageException, InvalidKeyException, URISyntaxException {
-        container = azurite.getReadBlobContainerClient("oak-test");
+        noRetryBlobContainerClient = azurite.getNoRetryBlobContainerClient("oak-test");
+        readBlobContainerClient = azurite.getReadBlobContainerClient("oak-test");
     }
 
     @Rule
@@ -71,8 +73,9 @@ public class AzureRepositoryLockTest {
 
     @Test
     public void testFailingLock() throws IOException, BlobStorageException {
-        BlockBlobClient blockBlobClient = container.getBlobClient("oak/repo.lock").getBlockBlobClient();
-        BlobLeaseClient blobLeaseClient = new BlobLeaseClientBuilder().blobClient(blockBlobClient).buildClient();
+        BlockBlobClient blockBlobClient = readBlobContainerClient.getBlobClient("oak/repo.lock").getBlockBlobClient();
+        BlockBlobClient noRetrtBlockBlobClient = noRetryBlobContainerClient.getBlobClient("oak/repo.lock").getBlockBlobClient();
+        BlobLeaseClient blobLeaseClient = new BlobLeaseClientBuilder().blobClient(noRetrtBlockBlobClient).buildClient();
         new AzureRepositoryLock(blockBlobClient, blobLeaseClient, () -> {}, new WriteAccessController()).lock();
         try {
             new AzureRepositoryLock(blockBlobClient, blobLeaseClient, () -> {}, new WriteAccessController()).lock();
@@ -84,8 +87,9 @@ public class AzureRepositoryLockTest {
 
     @Test
     public void testWaitingLock() throws BlobStorageException, InterruptedException, IOException {
-        BlockBlobClient blockBlobClient = container.getBlobClient("oak/repo.lock").getBlockBlobClient();
-        BlobLeaseClient blobLeaseClient = new BlobLeaseClientBuilder().blobClient(blockBlobClient).buildClient();
+        BlockBlobClient blockBlobClient = readBlobContainerClient.getBlobClient("oak/repo.lock").getBlockBlobClient();
+        BlockBlobClient noRetrtBlockBlobClient = noRetryBlobContainerClient.getBlobClient("oak/repo.lock").getBlockBlobClient();
+        BlobLeaseClient blobLeaseClient = new BlobLeaseClientBuilder().blobClient(noRetrtBlockBlobClient).buildClient();
         Semaphore s = new Semaphore(0);
         new Thread(() -> {
             try {
@@ -104,8 +108,9 @@ public class AzureRepositoryLockTest {
 
     @Test
     public void testLeaseRefreshUnsuccessful() throws BlobStorageException, IOException, InterruptedException {
-        BlockBlobClient blockBlobClient = container.getBlobClient("oak/repo.lock").getBlockBlobClient();
-        BlobLeaseClient blobLeaseClient = new BlobLeaseClientBuilder().blobClient(blockBlobClient).buildClient();
+        BlockBlobClient blockBlobClient = readBlobContainerClient.getBlobClient("oak/repo.lock").getBlockBlobClient();
+        BlockBlobClient noRetryBlockBlobClient = noRetryBlobContainerClient.getBlobClient("oak/repo.lock").getBlockBlobClient();
+        BlobLeaseClient blobLeaseClient = new BlobLeaseClientBuilder().blobClient(noRetryBlockBlobClient).buildClient();
 
         BlockBlobClient blobMocked = Mockito.spy(blockBlobClient);
         BlobLeaseClient blobLeaseMocked = Mockito.spy(blobLeaseClient);
@@ -136,9 +141,9 @@ public class AzureRepositoryLockTest {
 
     @Test
     public void testWritesBlockedOnlyAfterFewUnsuccessfulAttempts() throws Exception {
-
-        BlockBlobClient blockBlobClient = container.getBlobClient("oak/repo.lock").getBlockBlobClient();
-        BlobLeaseClient blobLeaseClient = new BlobLeaseClientBuilder().blobClient(blockBlobClient).buildClient();
+        BlockBlobClient blockBlobClient = readBlobContainerClient.getBlobClient("oak/repo.lock").getBlockBlobClient();
+        BlockBlobClient noRetrtBlockBlobClient = noRetryBlobContainerClient.getBlobClient("oak/repo.lock").getBlockBlobClient();
+        BlobLeaseClient blobLeaseClient = new BlobLeaseClientBuilder().blobClient(noRetrtBlockBlobClient).buildClient();
 
         BlockBlobClient blobMocked = Mockito.spy(blockBlobClient);
         BlobLeaseClient blobLeaseMocked = Mockito.spy(blobLeaseClient);

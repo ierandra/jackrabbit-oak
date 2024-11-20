@@ -33,16 +33,19 @@ public class AzureTarFilesTest extends TarFilesTest {
 
     private BlobContainerClient readBlobContainerClient;
     private BlobContainerClient writeBlobContainerClient;
+    private BlobContainerClient noRetryBlobContainerClient;
 
     @Before
     @Override
     public void setUp() throws Exception {
         readBlobContainerClient = azurite.getReadBlobContainerClient("oak-test");
         writeBlobContainerClient = azurite.getWriteBlobContainerClient("oak-test");
-        AzurePersistence azurePersistenceV8 = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, "oak");
+        noRetryBlobContainerClient = azurite.getNoRetryBlobContainerClient("oak-test");
+
+        AzurePersistence azurePersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, "oak");
         WriteAccessController writeAccessController = new WriteAccessController();
         writeAccessController.enableWriting();
-        azurePersistenceV8.setWriteAccessController(writeAccessController);
+        azurePersistence.setWriteAccessController(writeAccessController);
         tarFiles = TarFiles.builder()
                 .withDirectory(folder.newFolder())
                 .withTarRecovery((id, data, recovery) -> {
@@ -52,7 +55,7 @@ public class AzureTarFilesTest extends TarFilesTest {
                 .withFileStoreMonitor(new FileStoreMonitorAdapter())
                 .withRemoteStoreMonitor(new RemoteStoreMonitorAdapter())
                 .withMaxFileSize(MAX_FILE_SIZE)
-                .withPersistence(azurePersistenceV8)
+                .withPersistence(azurePersistence)
                 .build();
     }
 }

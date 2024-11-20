@@ -61,26 +61,16 @@ public class SegmentAzureFixture extends NodeStoreFixture {
             String endpoint = String.format("https://%s.blob.core.windows.net", containerName);
 
             RequestRetryOptions retryOptions = AzureRequestOptions.getRetryOptionsDefault();
-            BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
-                    .endpoint(endpoint)
-                    .connectionString(AZURE_CONNECTION_STRING)
-                    .retryOptions(retryOptions)
-                    .buildClient();
-
-            BlobContainerClient reaBlobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
+            BlobContainerClient reaBlobContainerClient = getBlobContainerClient(retryOptions, endpoint, containerName);
 
             RequestRetryOptions writeRetryOptions = AzureRequestOptions.getRetryOperationsOptimiseForWriteOperations();
-            BlobServiceClient writeBlobServiceClient = new BlobServiceClientBuilder()
-                    .endpoint(endpoint)
-                    .connectionString(AZURE_CONNECTION_STRING)
-                    .retryOptions(writeRetryOptions)
-                    .buildClient();
-
-            writeBlobContainerClient = writeBlobServiceClient.getBlobContainerClient(containerName);
+            writeBlobContainerClient = getBlobContainerClient(writeRetryOptions, endpoint, containerName);
 
             writeBlobContainerClient.createIfNotExists();
 
-            persistence = new AzurePersistence(reaBlobContainerClient, writeBlobContainerClient, AZURE_ROOT_PATH);
+            BlobContainerClient noRetryBlobContainerClient = getBlobContainerClient(null, endpoint, containerName);
+
+            persistence = new AzurePersistence(reaBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, AZURE_ROOT_PATH);
         } catch (BlobStorageException e) {
             throw new RuntimeException(e);
         }
@@ -114,5 +104,18 @@ public class SegmentAzureFixture extends NodeStoreFixture {
     @Override
     public String toString() {
         return "SegmentAzure";
+    }
+
+    private BlobContainerClient getBlobContainerClient(RequestRetryOptions retryOptions, String endpoint, String containerName) {
+        BlobServiceClientBuilder builder = new BlobServiceClientBuilder()
+                .endpoint(endpoint)
+                .connectionString(AZURE_CONNECTION_STRING);
+        if (retryOptions != null) {
+            builder.retryOptions(retryOptions);
+        }
+
+        BlobServiceClient blobServiceClient = builder.buildClient();
+
+        return blobServiceClient.getBlobContainerClient(containerName);
     }
 }

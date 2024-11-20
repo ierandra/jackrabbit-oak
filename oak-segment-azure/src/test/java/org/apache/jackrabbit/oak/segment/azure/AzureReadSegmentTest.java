@@ -49,16 +49,18 @@ public class AzureReadSegmentTest {
 
     private BlobContainerClient readBlobContainerClient;
     private BlobContainerClient writeBlobContainerClient;
+    private BlobContainerClient noRetryBlobContainerClient;
 
     @Before
     public void setup() throws BlobStorageException, InvalidKeyException, URISyntaxException {
         readBlobContainerClient = azurite.getReadBlobContainerClient("oak-test");
         writeBlobContainerClient = azurite.getWriteBlobContainerClient("oak-test");
+        noRetryBlobContainerClient = azurite.getNoRetryBlobContainerClient("oak-test");
     }
 
     @Test(expected = SegmentNotFoundException.class)
     public void testReadNonExistentSegmentRepositoryReachable() throws IOException, InvalidFileStoreVersionException, BlobStorageException {
-        AzurePersistence p = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, "oak");
+        AzurePersistence p = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, "oak");
         FileStore fs = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(p).build();
         SegmentId id = new SegmentId(fs, 0, 0);
 
@@ -71,7 +73,7 @@ public class AzureReadSegmentTest {
 
     @Test(expected = RepositoryNotReachableException.class)
     public void testReadExistentSegmentRepositoryNotReachable() throws IOException, InvalidFileStoreVersionException, BlobStorageException {
-        AzurePersistence p = new ReadFailingAzurePersistence(readBlobContainerClient, writeBlobContainerClient, "oak");
+        AzurePersistence p = new ReadFailingAzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, "oak");
         FileStore fs = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(p).build();
 
         SegmentId id = new SegmentId(fs, 0, 0);
@@ -86,14 +88,14 @@ public class AzureReadSegmentTest {
     }
 
     static class ReadFailingAzurePersistence extends AzurePersistence {
-        public ReadFailingAzurePersistence(BlobContainerClient readBlobContainerClient, BlobContainerClient writeBlobContainerClient, String rootPrefix) {
-            super(readBlobContainerClient, writeBlobContainerClient, rootPrefix);
+        public ReadFailingAzurePersistence(BlobContainerClient readBlobContainerClient, BlobContainerClient writeBlobContainerClient, BlobContainerClient noRetryBlobContainerClient, String rootPrefix) {
+            super(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, rootPrefix);
         }
 
         @Override
         public SegmentArchiveManager createArchiveManager(boolean mmap, boolean offHeapAccess, IOMonitor ioMonitor,
                                                           FileStoreMonitor fileStoreMonitor, RemoteStoreMonitor remoteStoreMonitor) {
-            return new AzureArchiveManager(readBlobContainerClient, writeBlobContainerClient, rootPrefix,ioMonitor, fileStoreMonitor, writeAccessController) {
+            return new AzureArchiveManager(readBlobContainerClient, writeBlobContainerClient, rootPrefix, ioMonitor, fileStoreMonitor, writeAccessController) {
                 @Override
                 public SegmentArchiveReader open(String archiveName) throws IOException {
                     return new AzureSegmentArchiveReader(readBlobContainerClient, rootPrefix, archiveName, ioMonitor) {
@@ -111,7 +113,8 @@ public class AzureReadSegmentTest {
                         @Override
                         public Buffer readSegment(long msb, long lsb) throws IOException {
                             throw new RepositoryNotReachableException(
-                                    new RuntimeException("Cannot access Azure storage"));                        }
+                                    new RuntimeException("Cannot access Azure storage"));
+                        }
                     };
                 }
             };

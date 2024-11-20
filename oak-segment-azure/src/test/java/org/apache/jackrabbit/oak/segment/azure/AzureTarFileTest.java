@@ -39,13 +39,17 @@ public class AzureTarFileTest extends TarFileTest {
 
     private BlobContainerClient writeBlobContainerClient;
 
+    private BlobContainerClient noRetryBlobContainerClient;
+
     @Before
     @Override
     public void setUp() throws IOException {
         try {
             readBlobContainerClient = azurite.getReadBlobContainerClient("oak-test");
             writeBlobContainerClient = azurite.getWriteBlobContainerClient("oak-test");
-            AzurePersistence azurePersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, "oak");
+            noRetryBlobContainerClient = azurite.getNoRetryBlobContainerClient("oak-test");
+
+            AzurePersistence azurePersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, "oak");
             WriteAccessController writeAccessController = new WriteAccessController();
             writeAccessController.enableWriting();
             azurePersistence.setWriteAccessController(writeAccessController);

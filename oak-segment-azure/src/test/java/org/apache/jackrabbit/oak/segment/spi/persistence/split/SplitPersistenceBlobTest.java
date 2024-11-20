@@ -79,9 +79,10 @@ public class SplitPersistenceBlobTest {
     public void setup() throws IOException, InvalidFileStoreVersionException, CommitFailedException, URISyntaxException, InvalidKeyException, BlobStorageException {
         BlobContainerClient readBlobContainerClient = azurite.getReadBlobContainerClient("oak-test");
         BlobContainerClient writeBlobContainerClient = azurite.getWriteBlobContainerClient("oak-test");
+        BlobContainerClient noRetryBlobContainerClient = azurite.getNoRetryBlobContainerClient("oak-test");
 
         SegmentNodeStorePersistence sharedPersistence =
-            new AzurePersistence(readBlobContainerClient, writeBlobContainerClient,"oak");
+            new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient,"oak");
         File dataStoreDir = new File(folder.getRoot(), "blobstore");
         BlobStore blobStore = newBlobStore(dataStoreDir);
 

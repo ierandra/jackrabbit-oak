@@ -90,6 +90,7 @@ public class AzureArchiveManagerTest {
 
     private BlobContainerClient readBlobContainerClient;
     private BlobContainerClient writeBlobContainerClient;
+    private BlobContainerClient noRetryBlobContainerClient;
 
     private AzurePersistence azurePersistence;
 
@@ -97,10 +98,11 @@ public class AzureArchiveManagerTest {
     public void setup() throws BlobStorageException, InvalidKeyException, URISyntaxException {
         readBlobContainerClient = azurite.getReadBlobContainerClient("oak-test");
         writeBlobContainerClient = azurite.getWriteBlobContainerClient("oak-test");
+        noRetryBlobContainerClient = azurite.getNoRetryBlobContainerClient("oak-test");
 
         WriteAccessController writeAccessController = new WriteAccessController();
         writeAccessController.enableWriting();
-        azurePersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, "oak");
+        azurePersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, "oak");
         azurePersistence.setWriteAccessController(writeAccessController);
     }
 
@@ -154,17 +156,17 @@ public class AzureArchiveManagerTest {
         manager.backup("data00000a.tar", "data00000a.tar.bak", recovered.keySet());
 
         for (int i = 0; i <= 4; i++) {
-            assertTrue(readBlobContainerClient.getBlobClient("oak/data00000a.tar/000"+ i + "." + uuids.get(i)).exists());
+            assertTrue(readBlobContainerClient.getBlobClient("oak/data00000a.tar/000" + i + "." + uuids.get(i)).exists());
         }
 
         for (int i = 5; i <= 9; i++) {
-            assertFalse(String.format("Segment %s.??? should have been deleted.", "oak/data00000a.tar/000"+ i), readBlobContainerClient.getBlobClient("oak/data00000a.tar/000"+ i + "." + uuids.get(i)).exists());
+            assertFalse(String.format("Segment %s.??? should have been deleted.", "oak/data00000a.tar/000" + i), readBlobContainerClient.getBlobClient("oak/data00000a.tar/000" + i + "." + uuids.get(i)).exists());
         }
     }
 
     @Test
     public void testUncleanStop() throws IOException, InvalidFileStoreVersionException, CommitFailedException, BlobStorageException {
-        AzurePersistence p = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient,"oak");
+        AzurePersistence p = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, "oak");
         FileStore fs = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(p).build();
         SegmentNodeStore segmentNodeStore = SegmentNodeStoreBuilders.builder(fs).build();
         NodeBuilder builder = segmentNodeStore.getRoot().builder();
@@ -186,7 +188,7 @@ public class AzureArchiveManagerTest {
     @Test
     // see OAK-8566
     public void testUncleanStopWithEmptyArchive() throws IOException, InvalidFileStoreVersionException, CommitFailedException, BlobStorageException {
-        AzurePersistence p = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, "oak");
+        AzurePersistence p = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, "oak");
         FileStore fs = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(p).build();
         SegmentNodeStore segmentNodeStore = SegmentNodeStoreBuilders.builder(fs).build();
         NodeBuilder builder = segmentNodeStore.getRoot().builder();
@@ -218,7 +220,7 @@ public class AzureArchiveManagerTest {
 
     @Test
     public void testUncleanStopSegmentMissing() throws IOException, InvalidFileStoreVersionException, CommitFailedException, BlobStorageException {
-        AzurePersistence p = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient,"oak");
+        AzurePersistence p = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, "oak");
         FileStore fs = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(p).build();
         SegmentNodeStore segmentNodeStore = SegmentNodeStoreBuilders.builder(fs).build();
         NodeBuilder builder = segmentNodeStore.getRoot().builder();
@@ -345,7 +347,7 @@ public class AzureArchiveManagerTest {
     @Test(expected = SegmentNotFoundException.class)
     public void testMissingSegmentDetectedInFileStore() throws IOException, BlobStorageException, InvalidFileStoreVersionException {
 
-        AzurePersistence azurePersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient,"oak");
+        AzurePersistence azurePersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, "oak");
         FileStore fileStore = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(azurePersistence).build();
 
         SegmentArchiveManager manager = azurePersistence.createArchiveManager(false, false, new IOMonitorAdapter(), new FileStoreMonitorAdapter(), new RemoteStoreMonitorAdapter());
@@ -372,7 +374,7 @@ public class AzureArchiveManagerTest {
 
     @Test
     public void testReadOnlyRecovery() throws InvalidFileStoreVersionException, IOException, CommitFailedException, BlobStorageException {
-        AzurePersistence rwPersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient,"oak");
+        AzurePersistence rwPersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, "oak");
         FileStore rwFileStore = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(rwPersistence).build();
         SegmentNodeStore segmentNodeStore = SegmentNodeStoreBuilders.builder(rwFileStore).build();
         NodeBuilder builder = segmentNodeStore.getRoot().builder();
@@ -382,12 +384,12 @@ public class AzureArchiveManagerTest {
 
         ListBlobsOptions listOptions = new ListBlobsOptions();
         listOptions.setPrefix("oak/data00000a.tar");
-        assertTrue(readBlobContainerClient.listBlobs(listOptions,null).iterator().hasNext());
+        assertTrue(readBlobContainerClient.listBlobs(listOptions, null).iterator().hasNext());
         listOptions.setPrefix("oak/data00000a.tar.ro.bak");
         assertFalse(readBlobContainerClient.listBlobs(listOptions, null).iterator().hasNext());
 
         // create read-only FS
-        AzurePersistence roPersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, "oak");
+        AzurePersistence roPersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, "oak");
         ReadOnlyFileStore roFileStore = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(roPersistence).buildReadOnly();
 
         PropertyState fooProperty = SegmentNodeStoreBuilders.builder(roFileStore).build()
@@ -408,7 +410,7 @@ public class AzureArchiveManagerTest {
 
     @Test
     public void testCachingPersistenceTarRecovery() throws InvalidFileStoreVersionException, IOException, CommitFailedException, BlobStorageException {
-        AzurePersistence rwPersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient,"oak");
+        AzurePersistence rwPersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, "oak");
         FileStore rwFileStore = FileStoreBuilder.fileStoreBuilder(folder.newFolder()).withCustomPersistence(rwPersistence).build();
         SegmentNodeStore segmentNodeStore = SegmentNodeStoreBuilders.builder(rwFileStore).build();
         NodeBuilder builder = segmentNodeStore.getRoot().builder();
@@ -423,7 +425,7 @@ public class AzureArchiveManagerTest {
         assertFalse(readBlobContainerClient.listBlobs(listOptions, null).iterator().hasNext());
 
         // create files store with split persistence
-        AzurePersistence azureSharedPersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient,"oak");
+        AzurePersistence azureSharedPersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, "oak");
 
         CachingPersistence cachingPersistence = new CachingPersistence(createPersistenceCache(), azureSharedPersistence);
         File localFolder = folder.newFolder();
@@ -442,7 +444,7 @@ public class AzureArchiveManagerTest {
 
     @Test
     public void testCollectBlobReferencesForReadOnlyFileStore() throws InvalidFileStoreVersionException, IOException, CommitFailedException, BlobStorageException {
-        AzurePersistence rwPersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient,"oak");
+        AzurePersistence rwPersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, "oak");
         try (FileStore rwFileStore = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(rwPersistence).build()) {
             SegmentNodeStore segmentNodeStore = SegmentNodeStoreBuilders.builder(rwFileStore).build();
             NodeBuilder builder = segmentNodeStore.getRoot().builder();
@@ -454,7 +456,7 @@ public class AzureArchiveManagerTest {
             assertFalse("brf file should not be present", readBlobContainerClient.getBlobClient("oak/data00000a.tar/data00000a.tar.brf").exists());
 
             // create read-only FS, while the rw FS is still open
-            AzurePersistence roPersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, "oak");
+            AzurePersistence roPersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, "oak");
             try (ReadOnlyFileStore roFileStore = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(roPersistence).buildReadOnly()) {
 
                 PropertyState fooProperty = SegmentNodeStoreBuilders.builder(roFileStore).build()
@@ -472,7 +474,7 @@ public class AzureArchiveManagerTest {
 
     @Test
     public void testCollectBlobReferencesDoesNotFailWhenFileIsMissing() throws InvalidFileStoreVersionException, IOException, CommitFailedException, BlobStorageException {
-        AzurePersistence rwPersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, "oak");
+        AzurePersistence rwPersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, "oak");
         try (FileStore rwFileStore = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(rwPersistence).build()) {
             SegmentNodeStore segmentNodeStore = SegmentNodeStoreBuilders.builder(rwFileStore).build();
             NodeBuilder builder = segmentNodeStore.getRoot().builder();
@@ -484,7 +486,7 @@ public class AzureArchiveManagerTest {
             assertFalse("brf file should not be present", readBlobContainerClient.getBlobClient("oak/data00000a.tar/data00000a.tar.brf").exists());
 
             // create read-only FS, while the rw FS is still open
-            AzurePersistence roPersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, "oak");
+            AzurePersistence roPersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, "oak");
             try (ReadOnlyFileStore roFileStore = FileStoreBuilder.fileStoreBuilder(new File("target")).withCustomPersistence(roPersistence).buildReadOnly()) {
 
                 PropertyState fooProperty = SegmentNodeStoreBuilders.builder(roFileStore).build()
@@ -507,7 +509,8 @@ public class AzureArchiveManagerTest {
     public void testWriteAfterLosingRepoLock() throws Exception {
         BlobContainerClient oakDirectory = readBlobContainerClient.getBlobClient("oak").getContainerClient();
         BlobContainerClient writeOakDirectory = writeBlobContainerClient.getBlobClient("oak").getContainerClient();
-        AzurePersistence rwPersistence = new AzurePersistence(oakDirectory, writeOakDirectory, "");
+        BlobContainerClient noRetryOakDirectory = noRetryBlobContainerClient.getBlobClient("oak").getContainerClient();
+        AzurePersistence rwPersistence = new AzurePersistence(oakDirectory, writeOakDirectory, noRetryOakDirectory, "");
 
         BlockBlobClient blob = readBlobContainerClient.getBlobClient("oak/repo.lock").getBlockBlobClient();
         BlobLeaseClient leaseClient = new BlobLeaseClientBuilder().blobClient(blob).buildClient();
@@ -522,7 +525,8 @@ public class AzureArchiveManagerTest {
 
         AzurePersistence mockedRwPersistence = Mockito.spy(rwPersistence);
         WriteAccessController writeAccessController = new WriteAccessController();
-        AzureRepositoryLock azureRepositoryLock = new AzureRepositoryLock(blobMocked, blobLeaseMocked, () -> {}, writeAccessController);
+        AzureRepositoryLock azureRepositoryLock = new AzureRepositoryLock(blobMocked, blobLeaseMocked, () -> {
+        }, writeAccessController);
         AzureArchiveManager azureArchiveManager = new AzureArchiveManager(oakDirectory, writeOakDirectory, "", new IOMonitorAdapter(), new FileStoreMonitorAdapter(), writeAccessController);
 
 
@@ -570,7 +574,7 @@ public class AzureArchiveManagerTest {
         Thread.sleep(2000);
 
         // It should be possible to start another RW file store.
-        FileStore rwFileStore2 = FileStoreBuilder.fileStoreBuilder(folder.newFolder()).withCustomPersistence(new AzurePersistence(oakDirectory, writeOakDirectory, "")).build();
+        FileStore rwFileStore2 = FileStoreBuilder.fileStoreBuilder(folder.newFolder()).withCustomPersistence(new AzurePersistence(oakDirectory, writeOakDirectory, noRetryOakDirectory, "")).build();
         SegmentNodeStore segmentNodeStore2 = SegmentNodeStoreBuilders.builder(rwFileStore2).build();
         NodeBuilder builder2 = segmentNodeStore2.getRoot().builder();
 

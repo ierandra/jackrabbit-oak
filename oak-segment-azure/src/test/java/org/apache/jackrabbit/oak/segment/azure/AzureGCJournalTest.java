@@ -35,16 +35,18 @@ public class AzureGCJournalTest extends GcJournalTest {
 
     private BlobContainerClient readBlobContainerClient;
     private BlobContainerClient writeBlobContainerClient;
+    private BlobContainerClient noRetryBlobContainerClient;
 
     @Before
     public void setup() throws BlobStorageException {
         readBlobContainerClient = azurite.getReadBlobContainerClient("oak-test");
         writeBlobContainerClient = azurite.getWriteBlobContainerClient("oak-test");
+        noRetryBlobContainerClient = azurite.getNoRetryBlobContainerClient("oak-test");
     }
 
     @Override
     protected SegmentNodeStorePersistence getPersistence() throws Exception {
-        return new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, "oak");
+        return new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, "oak");
     }
 
     @Test

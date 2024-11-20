@@ -43,7 +43,9 @@ public class AzurePersistence implements SegmentNodeStorePersistence {
 
     protected final BlobContainerClient readBlobContainerClient;
 
-    protected BlobContainerClient writeBlobContainerClient;
+    protected final BlobContainerClient writeBlobContainerClient;
+
+    protected final BlobContainerClient noRetryBlobContainerClient;
 
     protected final String rootPrefix;
 
@@ -51,13 +53,14 @@ public class AzurePersistence implements SegmentNodeStorePersistence {
 
     protected WriteAccessController writeAccessController = new WriteAccessController();
 
-    public AzurePersistence(BlobContainerClient readBlobContainerClient, BlobContainerClient writeBlobContainerClient, String rootPrefix) {
-        this(readBlobContainerClient, writeBlobContainerClient, rootPrefix, null);
+    public AzurePersistence(BlobContainerClient readBlobContainerClient, BlobContainerClient writeBlobContainerClient, BlobContainerClient noRetryBlobContainerClient, String rootPrefix) {
+        this(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, rootPrefix, null);
     }
 
-    public AzurePersistence(BlobContainerClient readBlobContainerClient, BlobContainerClient writeBlobContainerClient, String rootPrefix, AzureHttpRequestLoggingPolicy azureHttpRequestLoggingPolicy) {
+    public AzurePersistence(BlobContainerClient readBlobContainerClient, BlobContainerClient writeBlobContainerClient, BlobContainerClient noRetryBlobContainerClient, String rootPrefix, AzureHttpRequestLoggingPolicy azureHttpRequestLoggingPolicy) {
         this.readBlobContainerClient = readBlobContainerClient;
         this.writeBlobContainerClient = writeBlobContainerClient;
+        this.noRetryBlobContainerClient = noRetryBlobContainerClient;
         this.azureHttpRequestLoggingPolicy = azureHttpRequestLoggingPolicy;
         this.rootPrefix = rootPrefix;
     }
@@ -98,7 +101,8 @@ public class AzurePersistence implements SegmentNodeStorePersistence {
     @Override
     public RepositoryLock lockRepository() throws IOException {
         BlockBlobClient blockBlobClient = getBlockBlob("repo.lock");
-        BlobLeaseClient blobLeaseClient = new BlobLeaseClientBuilder().blobClient(blockBlobClient).buildClient();
+        BlockBlobClient noRetryBlockBlobClient = getNoRetryBlockBlob("repo.lock");
+        BlobLeaseClient blobLeaseClient = new BlobLeaseClientBuilder().blobClient(noRetryBlockBlobClient).buildClient();
         return new AzureRepositoryLock(blockBlobClient, blobLeaseClient, () -> {
             log.warn("Lost connection to the Azure. The client will be closed.");
             // TODO close the connection
@@ -108,6 +112,14 @@ public class AzurePersistence implements SegmentNodeStorePersistence {
     private BlockBlobClient getBlockBlob(String path) throws IOException {
         try {
             return readBlobContainerClient.getBlobClient(rootPrefix + "/" + path).getBlockBlobClient();
+        } catch (BlobStorageException e) {
+            throw new IOException(e);
+        }
+    }
+
+    private BlockBlobClient getNoRetryBlockBlob(String path) throws IOException {
+        try {
+            return noRetryBlobContainerClient.getBlobClient(rootPrefix + "/" + path).getBlockBlobClient();
         } catch (BlobStorageException e) {
             throw new IOException(e);
         }

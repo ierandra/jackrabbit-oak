@@ -180,12 +180,13 @@ public class AzureSegmentArchiveWriterTest {
         createContainerMock();
         BlobContainerClient readBlobContainerClient = getCloudStorageAccount("oak-test",  AzureRequestOptions.getRetryOptionsDefault());
         BlobContainerClient writeBlobContainerClient = getCloudStorageAccount("oak-test", AzureRequestOptions.getRetryOperationsOptimiseForWriteOperations());
+        BlobContainerClient noRetryBlobContainerClient = getCloudStorageAccount("oak-test", null);
         writeBlobContainerClient.deleteIfExists();
         writeBlobContainerClient.createIfNotExists();
 
         WriteAccessController writeAccessController = new WriteAccessController();
         writeAccessController.enableWriting();
-        AzurePersistence azurePersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, "oak");/**/
+        AzurePersistence azurePersistence = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, "oak");/**/
         azurePersistence.setWriteAccessController(writeAccessController);
         SegmentArchiveManager manager = azurePersistence.createArchiveManager(false, false, new IOMonitorAdapter(), new FileStoreMonitorAdapter(), new RemoteStoreMonitorAdapter());
         SegmentArchiveWriter writer = manager.create("data00000a.tar");
@@ -239,12 +240,16 @@ public class AzureSegmentArchiveWriterTest {
 
         AzureHttpRequestLoggingTestingPolicy azureHttpRequestLoggingTestingPolicy = new AzureHttpRequestLoggingTestingPolicy();
 
-        BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
+        BlobServiceClientBuilder builder = new BlobServiceClientBuilder()
                 .endpoint(azurite.getBlobEndpoint())
                 .addPolicy(azureHttpRequestLoggingTestingPolicy)
-                .connectionString(("DefaultEndpointsProtocol=http;" + accountName + ";" + accountKey + ";" + blobEndpoint))
-                .retryOptions(retryOptions)
-                .buildClient();
+                .connectionString(("DefaultEndpointsProtocol=http;" + accountName + ";" + accountKey + ";" + blobEndpoint));
+
+        if (retryOptions != null) {
+            builder.retryOptions(retryOptions);
+        }
+
+        BlobServiceClient blobServiceClient = builder.buildClient();
 
         return blobServiceClient.getBlobContainerClient(containerName);
     }

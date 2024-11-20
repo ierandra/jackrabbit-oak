@@ -133,13 +133,15 @@ public class AzurePersistenceManager {
         RequestRetryOptions writeRetryOptions = AzureRequestOptions.getRetryOperationsOptimiseForWriteOperations();
         BlobContainerClient writeContainerClient = getBlobContainerClient(accountName, containerName, writeRetryOptions, azureHttpRequestLoggingPolicy, clientSecretCredential);
 
+        BlobContainerClient noRetryBlobContainerClient = getBlobContainerClient(accountName, containerName, null, azureHttpRequestLoggingPolicy, clientSecretCredential);
+
         if (createContainer) {
             blobContainerClient.createIfNotExists();
         }
 
         final String rootPrefixNormalized = normalizePath(rootPrefix);
 
-        return new AzurePersistence(blobContainerClient, writeContainerClient, rootPrefixNormalized, azureHttpRequestLoggingPolicy);
+        return new AzurePersistence(blobContainerClient, writeContainerClient, noRetryBlobContainerClient, rootPrefixNormalized, azureHttpRequestLoggingPolicy);
     }
 
     @NotNull
@@ -158,13 +160,15 @@ public class AzurePersistenceManager {
             RequestRetryOptions writeRetryOptions = AzureRequestOptions.getRetryOperationsOptimiseForWriteOperations();
             BlobContainerClient writeBlobContainerClient = getBlobContainerClient(accountName, containerName, writeRetryOptions, azureHttpRequestLoggingPolicy, connectionString);
 
+            BlobContainerClient noRetryBlobContainerClient = getBlobContainerClient(accountName, containerName, null, azureHttpRequestLoggingPolicy, connectionString);
+
             if (createContainer) {
                 blobContainerClient.createIfNotExists();
             }
 
             final String rootPrefixNormalized = normalizePath(rootPrefix);
 
-            return new AzurePersistence(blobContainerClient, writeBlobContainerClient, rootPrefixNormalized, azureHttpRequestLoggingPolicy);
+            return new AzurePersistence(blobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, rootPrefixNormalized, azureHttpRequestLoggingPolicy);
         } catch (BlobStorageException e) {
             throw new IOException(e);
         }
@@ -189,10 +193,15 @@ public class AzurePersistenceManager {
     private static BlobServiceClientBuilder blobServiceClientBuilder(String accountName, RequestRetryOptions requestRetryOptions, AzureHttpRequestLoggingPolicy azureHttpRequestLoggingPolicy) {
         String endpoint = String.format("https://%s.blob.core.windows.net", accountName);
 
-        return new BlobServiceClientBuilder()
+        BlobServiceClientBuilder builder = new BlobServiceClientBuilder()
                 .endpoint(endpoint)
-                .addPolicy(azureHttpRequestLoggingPolicy)
-                .retryOptions(requestRetryOptions);
+                .addPolicy(azureHttpRequestLoggingPolicy);
+
+        if (requestRetryOptions != null) {
+            builder.retryOptions(requestRetryOptions);
+        }
+
+        return builder;
     }
 
     private static RequestRetryOptions readRequestRetryOptions(boolean enableSecondaryLocation, String accountName) {

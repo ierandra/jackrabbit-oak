@@ -30,7 +30,6 @@ import org.junit.ClassRule;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 
 public class AzureJournalReaderTest extends JournalReaderTest {

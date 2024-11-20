@@ -34,18 +34,20 @@ public class AzureTarRevisionsTest extends TarRevisionsTest {
 
     private BlobContainerClient readBlobContainerClient;
     private BlobContainerClient writeBlobContainerClient;
+    private BlobContainerClient noRetryBlobContainerClient;
 
     @Before
     public void setup() throws Exception {
         readBlobContainerClient = azurite.getReadBlobContainerClient("oak-test");
         writeBlobContainerClient = azurite.getWriteBlobContainerClient("oak-test");
+        noRetryBlobContainerClient = azurite.getNoRetryBlobContainerClient("oak-test");
         super.setup();
     }
 
     @Override
     protected SegmentNodeStorePersistence getPersistence() throws IOException {
         try {
-            return new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, "oak");
+            return new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, "oak");
         } catch (BlobStorageException e) {
             throw new IOException(e);
         }

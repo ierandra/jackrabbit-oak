@@ -107,6 +107,11 @@ public class AzuriteDockerRule extends ExternalResource {
         return cloud;
     }
 
+    public BlobContainerClient getNoRetryBlobContainerClient(String name) throws BlobStorageException {
+        BlobContainerClient cloud = getCloudStorageAccount(name, null);
+        return cloud;
+    }
+
     public BlobContainerClient getWriteBlobContainerClient(String name) throws BlobStorageException {
         BlobContainerClient cloud = getCloudStorageAccount(name, AzureRequestOptions.getRetryOperationsOptimiseForWriteOperations());
         return cloud;
@@ -119,12 +124,15 @@ public class AzuriteDockerRule extends ExternalResource {
 
         AzureHttpRequestLoggingTestingPolicy azureHttpRequestLoggingTestingPolicy = new AzureHttpRequestLoggingTestingPolicy();
 
-        BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
+        BlobServiceClientBuilder builder = new BlobServiceClientBuilder()
                 .endpoint(getBlobEndpoint())
                 .addPolicy(azureHttpRequestLoggingTestingPolicy)
-                .connectionString(("DefaultEndpointsProtocol=http;" + accountName + ";" + accountKey + ";" + blobEndpoint))
-                .retryOptions(retryOptions)
-                .buildClient();
+                .connectionString(("DefaultEndpointsProtocol=http;" + accountName + ";" + accountKey + ";" + blobEndpoint));
+        if (retryOptions != null) {
+            builder.retryOptions(retryOptions);
+        }
+
+       BlobServiceClient blobServiceClient = builder.buildClient();
 
         return blobServiceClient.getBlobContainerClient(containerName);
     }

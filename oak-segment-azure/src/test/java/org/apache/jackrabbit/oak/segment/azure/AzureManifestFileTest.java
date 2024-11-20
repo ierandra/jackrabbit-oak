@@ -40,16 +40,18 @@ public class AzureManifestFileTest {
 
     private BlobContainerClient readBlobContainerClient;
     private BlobContainerClient writeBlobContainerClient;
+    private BlobContainerClient noRetryBlobContainerClient;
 
     @Before
     public void setup() throws BlobStorageException, InvalidKeyException, URISyntaxException {
         readBlobContainerClient = azurite.getReadBlobContainerClient("oak-test");
         writeBlobContainerClient = azurite.getWriteBlobContainerClient("oak-test");
+        noRetryBlobContainerClient = azurite.getNoRetryBlobContainerClient("oak-test");
     }
 
     @Test
     public void testManifest() throws IOException {
-        ManifestFile manifestFile = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, "oak").getManifestFile();
+        ManifestFile manifestFile = new AzurePersistence(readBlobContainerClient, writeBlobContainerClient, noRetryBlobContainerClient, "oak").getManifestFile();
         assertFalse(manifestFile.exists());
 
         Properties props = new Properties();
