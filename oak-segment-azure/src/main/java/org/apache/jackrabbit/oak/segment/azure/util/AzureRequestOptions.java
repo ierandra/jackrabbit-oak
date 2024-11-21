@@ -49,17 +49,17 @@ public class AzureRequestOptions {
     }
 
     public static RequestRetryOptions getRetryOptionsDefault(String secondaryHost) {
-        int retryAttempts = Integer.getInteger(RETRY_ATTEMPTS_PROP, DEFAULT_RETRY_ATTEMPTS);
-        int timeoutExecution = Integer.getInteger(TIMEOUT_EXECUTION_PROP, DEFAULT_TIMEOUT_EXECUTION);
+        int maxTries = Integer.getInteger(RETRY_ATTEMPTS_PROP, DEFAULT_RETRY_ATTEMPTS);
+        int tryTimeoutInSeconds = Integer.getInteger(TIMEOUT_EXECUTION_PROP, DEFAULT_TIMEOUT_EXECUTION);
         int timeoutInterval = Integer.getInteger(TIMEOUT_INTERVAL_PROP, DEFAULT_TIMEOUT_INTERVAL);
-        long timeoutIntervalToMs = timeoutInterval * 1_000L;
-        long timeoutIntervalMax = timeoutIntervalToMs * 5;
+        long retryDelayInMs = timeoutInterval * 1_000L;
+        long maxRetryDelayInMs = retryDelayInMs * 5;
 
         return new RequestRetryOptions(RetryPolicyType.FIXED,
-                retryAttempts,
-                timeoutExecution,
-                timeoutIntervalToMs,
-                timeoutIntervalMax,
+                maxTries,
+                tryTimeoutInSeconds,
+                retryDelayInMs,
+                maxRetryDelayInMs,
                 secondaryHost);
     }
 
@@ -68,17 +68,17 @@ public class AzureRequestOptions {
      * @return
      */
     public static RequestRetryOptions getRetryOperationsOptimiseForWriteOperations() {
-        int retryAttempts = Integer.getInteger(RETRY_ATTEMPTS_PROP, DEFAULT_RETRY_ATTEMPTS);
-        Integer writeTimeoutExecution = Integer.getInteger(WRITE_TIMEOUT_EXECUTION_PROP, DEFAULT_TIMEOUT_EXECUTION);
-        Integer writeTimeoutInterval = Integer.getInteger(WRITE_TIMEOUT_INTERVAL_PROP, DEFAULT_TIMEOUT_INTERVAL);
-        long writeTimeoutIntervalToMs = writeTimeoutInterval * 1_000L;
-        long writeTimeoutIntervalMax = writeTimeoutIntervalToMs * 5;
+        int maxTries = Integer.getInteger(RETRY_ATTEMPTS_PROP, DEFAULT_RETRY_ATTEMPTS);
+        Integer tryTimeoutInSeconds = Integer.getInteger(WRITE_TIMEOUT_EXECUTION_PROP, DEFAULT_TIMEOUT_EXECUTION);
+        Integer writeTimeoutIntervalInSeconds = Integer.getInteger(WRITE_TIMEOUT_INTERVAL_PROP, DEFAULT_TIMEOUT_INTERVAL);
+        long retryDelayInMs = writeTimeoutIntervalInSeconds * 1_000L;
+        long maxRetryDelayInMs = retryDelayInMs * 5;
 
         return new RequestRetryOptions(RetryPolicyType.FIXED,
-                retryAttempts,
-                writeTimeoutExecution,
-                writeTimeoutIntervalToMs,
-                writeTimeoutIntervalMax,
+                maxTries,
+                tryTimeoutInSeconds,
+                retryDelayInMs,
+                maxRetryDelayInMs,
                 null);
     }
 
