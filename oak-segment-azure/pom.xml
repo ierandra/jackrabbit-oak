@@ -63,6 +63,7 @@
                             io.netty.channel.epoll;resolution:=optional,
                             io.netty.handler.codec.*;resolution:=optional,
                             org.objectweb.asm;resolution:=optional,
+                            org.codehaus.stax2;resolution:=optional,
                             !org.apache.jackrabbit.oak.segment*,
                             !com.google.*,
                             !android.os,
@@ -108,7 +109,8 @@
                             json-smart,
                             content-type,
                             accessors-smart,
-                            nimbus-jose-jwt
+                            nimbus-jose-jwt,
+                            stax2-api
                         </Embed-Dependency>
                         <!-- needed to override value from oak-parent; can be removed when OAK-6741 is resolved -->
                         <_plugin />
@@ -198,6 +200,11 @@
         <dependency>
             <groupId>com.microsoft.azure</groupId>
             <artifactId>azure-keyvault-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.woodstox</groupId>
+            <artifactId>stax2-api</artifactId>
+            <version>4.2.2</version>
         </dependency>
 
         <!-- Azure Blob Storage v12 dependencies -->
