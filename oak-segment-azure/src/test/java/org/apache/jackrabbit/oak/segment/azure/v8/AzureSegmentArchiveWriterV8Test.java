@@ -27,6 +27,7 @@ import org.apache.jackrabbit.oak.segment.spi.monitor.RemoteStoreMonitorAdapter;
 import org.apache.jackrabbit.oak.segment.spi.persistence.SegmentArchiveManager;
 import org.apache.jackrabbit.oak.segment.spi.persistence.SegmentArchiveWriter;
 import org.jetbrains.annotations.NotNull;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -50,6 +51,10 @@ import static org.mockserver.verify.VerificationTimes.exactly;
 public class AzureSegmentArchiveWriterV8Test {
     public static final String BASE_PATH = "/devstoreaccount1/oak-test";
     public static final int MAX_ATTEMPTS = 3;
+    private static final String RETRY_ATTEMPTS = "segment.azure.retry.attempts";
+    private static final String TIMEOUT_EXECUTION = "segment.timeout.execution";
+    private static final String RETRY_INTERVAL_MS = "azure.segment.archive.writer.retries.intervalMs";
+    private static final String WRITE_RETRY_ATTEMPTS = "azure.segment.archive.writer.retries.max";
 
     @Rule
     public MockServerRule mockServerRule = new MockServerRule(this);
@@ -63,12 +68,21 @@ public class AzureSegmentArchiveWriterV8Test {
     public void setUp() throws Exception {
         container = createCloudBlobContainer();
 
-        System.setProperty("azure.segment.archive.writer.retries.intervalMs", "100");
-        System.setProperty("azure.segment.archive.writer.retries.max", Integer.toString(MAX_ATTEMPTS));
+        System.setProperty(RETRY_INTERVAL_MS, "100");
+        System.setProperty(WRITE_RETRY_ATTEMPTS, Integer.toString(MAX_ATTEMPTS));
 
         // Disable Azure SDK own retry mechanism used by AzureSegmentArchiveWriter
-        System.setProperty("segment.azure.retry.attempts", "0");
-        System.setProperty("segment.timeout.execution", "1");
+        System.setProperty(RETRY_ATTEMPTS, "0");
+        System.setProperty(TIMEOUT_EXECUTION, "1");
+    }
+
+    @AfterClass
+    public static void setDown() {
+        // resetting the values for the properties set in setUp(). otherwise these will apply to all the tests that are executed after
+        System.clearProperty(RETRY_ATTEMPTS);
+        System.clearProperty(TIMEOUT_EXECUTION);
+        System.clearProperty(RETRY_INTERVAL_MS);
+        System.clearProperty(WRITE_RETRY_ATTEMPTS);
     }
 
     @Test
