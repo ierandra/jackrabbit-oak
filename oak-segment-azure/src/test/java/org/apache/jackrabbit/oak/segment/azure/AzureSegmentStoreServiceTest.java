@@ -21,7 +21,7 @@ import com.azure.storage.blob.models.BlobItem;
 import com.azure.storage.blob.models.BlobStorageException;
 import com.azure.storage.blob.sas.BlobSasPermission;
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
-import org.apache.jackrabbit.guava.common.collect.ImmutableSet;
+
 import org.apache.jackrabbit.oak.segment.azure.util.Environment;
 import org.apache.jackrabbit.oak.segment.spi.persistence.SegmentNodeStorePersistence;
 import org.apache.sling.testing.mock.osgi.junit.OsgiContext;
@@ -32,7 +32,7 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.osgi.util.converter.Converters;
-
+import java.util.stream.Stream;
 import java.io.ByteArrayInputStream;
 import java.time.Duration;
 import java.time.Instant;
@@ -247,7 +247,7 @@ public class AzureSegmentStoreServiceTest {
     }
     
     private static Set<String> concat(Set<String> blobs, String element) {
-        return ImmutableSet.<String>builder().addAll(blobs).add(element).build();
+        return Stream.concat(blobs.stream(), Stream.of(element)).collect(toSet());
     }
 
     private static Configuration getConfigurationWithSharedAccessSignature(String sasToken) {
