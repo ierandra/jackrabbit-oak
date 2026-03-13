@@ -91,6 +91,16 @@ public class AzurePersistenceManager {
         return createPersistenceFromAccessKey(configuration);
     }
 
+    public static AzurePersistence createAzurePersistenceFromFailover(Configuration configuration) throws IOException {
+         if (!StringUtils.isAnyBlank(configuration.clientId(), configuration.clientSecret(), configuration.tenantId())) {
+             return createPersistenceFromServicePrincipalCredentials(configuration.failoverAccountName(), configuration.containerName(), configuration.rootPath(), configuration.failoverClientId(), configuration.failoverClientSecret(), configuration.failoverTenantId(), configuration.enableSecondaryLocation(), false);
+         }
+         if (!StringUtils.isAnyBlank(configuration.failoverAccountName(), configuration.failoverAccessKey())) {
+             return createPersistenceFromAccessKey(configuration.failoverAccountName(), configuration.containerName(), configuration.failoverAccessKey(), null, configuration.rootPath(), configuration.enableSecondaryLocation(), false);
+         }
+         return null;
+    }
+
     private static AzurePersistence createPersistenceFromAccessKey(Configuration configuration) throws IOException {
         return createPersistenceFromAccessKey(configuration.accountName(), configuration.containerName(), configuration.accessKey(), configuration.blobEndpoint(), configuration.rootPath(), configuration.enableSecondaryLocation(), true);
     }
