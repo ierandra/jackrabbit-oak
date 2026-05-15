@@ -59,13 +59,15 @@ public class AzureSegmentStoreService {
     @Activate
     public void activate(ComponentContext context, Configuration config) throws IOException {
         if (useAzureSdkV12) {
-            String failover = " failover";
-            AzurePersistence persistence = AzurePersistenceManager.createAzurePersistenceFromFailover(config);
-            if (persistence == null) {
-                failover = "";
+            AzurePersistence persistence;
+            if (config.failoverEnabled()) {
+                log.info("Starting node store using Azure SDK 12 in failover mode");
+                persistence = AzurePersistenceManager.createAzurePersistenceFromFailover(config);
+            } else {
+                log.info("Starting node store using Azure SDK 12");
                 persistence = AzurePersistenceManager.createAzurePersistenceFrom(config);
             }
-            log.info("Starting node store using Azure SDK 12 {}", failover);
+
             registration = registerPersistence(context, persistence, AzurePersistence.class.getName(), config);
         } else {
             log.info("Starting node store using Azure SDK 8");
