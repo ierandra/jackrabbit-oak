@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "full",
+  "commit_sha": "0372aff1fdc9ef7df6727dfea1b72f3c2b220e7b",
+  "author": "ierandra@adobe.com",
+  "timestamp": "2026-05-19T16:43:43+03:00",
+  "detection": {
+    "ai_assisted": false,
+    "method": "none",
+    "tool": "unknown",
+    "model": "",
+    "confidence": 0.0
+  },
+  "stats": {
+    "total_additions": 68,
+    "total_deletions": 16,
+    "ai_additions": 0,
+    "ai_deletions": 0,
+    "human_additions": 68,
+    "human_deletions": 16
+  },
+  "files": {
+    "oak-segment-azure/src/main/java/org/apache/jackrabbit/oak/segment/azure/AzurePersistenceManager.java": {
+      "ai_additions": 0,
+      "human_additions": 8,
+      "ai_deletions": 0,
+      "human_deletions": 0
+    },
+    "oak-segment-azure/src/main/java/org/apache/jackrabbit/oak/segment/azure/AzureSegmentStoreService.java": {
+      "ai_additions": 0,
+      "human_additions": 25,
+      "ai_deletions": 0,
+      "human_deletions": 16
+    },
+    "oak-segment-azure/src/main/java/org/apache/jackrabbit/oak/segment/azure/Configuration.java": {
+      "ai_additions": 0,
+      "human_additions": 35,
+      "ai_deletions": 0,
+      "human_deletions": 0
+    }
+  }
+}
